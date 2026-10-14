@@ -1,0 +1,225 @@
+from flask import Blueprint, request, jsonify
+from database import get_db_connection
+from app.utils.auth import hash_password, verify_password, generate_token, token_required
+
+auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+    # Public registration always creates standard customer accounts
+    role = "user"
+
+    if not name or not email or not password:
+        return jsonify({"error": "Name, email, and password are required."}), 400
+
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters long."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # Check if email exists
+            cur.execute("SELECT id FROM users WHERE email = %s;", (email,))
+            if cur.fetchone():
+                return jsonify({"error": "An account with this email address already exists."}), 409
+
+            pwd_hash = hash_password(password)
+            cur.execute("""
+                INSERT INTO users (name, email, password_hash, role)
+                VALUES (%s, %s, %s, %s);
+            """, (name, email, pwd_hash, role))
+            user_id = cur.lastrowid
+        conn.commit()
+
+        token = generate_token(user_id, email, role, name)
+        user_info = {
+            "id": user_id,
+            "name": name,
+            "email": email,
+            "role": role,
+            "phone": "",
+            "address": "",
+            "city": "",
+            "state": "",
+            "pincode": "",
+            "country": "India"
+        }
+        return jsonify({
+            "success": True,
+            "message": "Account created successfully!",
+            "token": token,
+            "user": user_info
+        }), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Registration failed: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, name, email, password_hash, role, phone, address, city, state, pincode, country, created_at 
+                FROM users WHERE email = %s;
+            """, (email,))
+            user = cur.fetchone()
+
+        if not user or not verify_password(password, user["password_hash"]):
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        token = generate_token(user["id"], user["email"], user["role"], user["name"])
+        user_info = {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "phone": user.get("phone") or "",
+            "address": user.get("address") or "",
+            "city": user.get("city") or "",
+            "state": user.get("state") or "",
+            "pincode": user.get("pincode") or "",
+            "country": user.get("country") or "India",
+            "created_at": str(user["created_at"])
+        }
+        return jsonify({
+            "success": True,
+            "message": f"Welcome back, {user['name']}!",
+            "token": token,
+            "user": user_info
+        }), 200
+    finally:
+        conn.close()
+
+@auth_bp.route("/me", methods=["GET"])
+@token_required
+def get_current_user():
+    user = request.user
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) as order_count FROM orders WHERE user_id = %s;", (user["id"],))
+            stats = cur.fetchone()
+        order_count = stats["order_count"] if stats else 0
+    finally:
+        conn.close()
+
+    return jsonify({
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "phone": user.get("phone") or "",
+            "address": user.get("address") or "",
+            "city": user.get("city") or "",
+            "state": user.get("state") or "",
+            "pincode": user.get("pincode") or "",
+            "country": user.get("country") or "India",
+            "created_at": str(user["created_at"]),
+            "orders_count": order_count
+        }
+    })
+
+@auth_bp.route("/profile", methods=["PUT"])
+@token_required
+def update_profile():
+    data = request.get_json() or {}
+    user_id = request.user["id"]
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    address = (data.get("address") or "").strip()
+    city = (data.get("city") or "").strip()
+    state = (data.get("state") or "").strip()
+    pincode = (data.get("pincode") or "").strip()
+    country = (data.get("country") or "India").strip()
+
+    current_password = data.get("current_password") or ""
+    new_password = data.get("new_password") or ""
+
+    if not name:
+        return jsonify({"error": "Full name cannot be empty."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # Check if password update was requested
+            if new_password:
+                if len(new_password) < 6:
+                    return jsonify({"error": "New password must be at least 6 characters long."}), 400
+                if not current_password:
+                    return jsonify({"error": "Current password is required to change password."}), 400
+
+                cur.execute("SELECT password_hash FROM users WHERE id = %s;", (user_id,))
+                user_row = cur.fetchone()
+                if not user_row or not verify_password(current_password, user_row["password_hash"]):
+                    return jsonify({"error": "Current password does not match our records."}), 400
+
+                new_hash = hash_password(new_password)
+                cur.execute("""
+                    UPDATE users 
+                    SET name = %s, phone = %s, address = %s, city = %s, state = %s, pincode = %s, country = %s, password_hash = %s
+                    WHERE id = %s;
+                """, (name, phone, address, city, state, pincode, country, new_hash, user_id))
+            else:
+                cur.execute("""
+                    UPDATE users 
+                    SET name = %s, phone = %s, address = %s, city = %s, state = %s, pincode = %s, country = %s
+                    WHERE id = %s;
+                """, (name, phone, address, city, state, pincode, country, user_id))
+
+            conn.commit()
+
+            # Retrieve updated user record
+            cur.execute("""
+                SELECT id, name, email, role, phone, address, city, state, pincode, country, created_at 
+                FROM users WHERE id = %s;
+            """, (user_id,))
+            updated_user = cur.fetchone()
+
+            cur.execute("SELECT COUNT(*) as order_count FROM orders WHERE user_id = %s;", (user_id,))
+            stats = cur.fetchone()
+            order_count = stats["order_count"] if stats else 0
+
+        # Generate updated token
+        token = generate_token(updated_user["id"], updated_user["email"], updated_user["role"], updated_user["name"])
+
+        user_info = {
+            "id": updated_user["id"],
+            "name": updated_user["name"],
+            "email": updated_user["email"],
+            "role": updated_user["role"],
+            "phone": updated_user.get("phone") or "",
+            "address": updated_user.get("address") or "",
+            "city": updated_user.get("city") or "",
+            "state": updated_user.get("state") or "",
+            "pincode": updated_user.get("pincode") or "",
+            "country": updated_user.get("country") or "India",
+            "created_at": str(updated_user["created_at"]),
+            "orders_count": order_count
+        }
+
+        return jsonify({
+            "success": True,
+            "message": "Profile and address updated successfully!",
+            "token": token,
+            "user": user_info
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update profile: {str(e)}"}), 500
+    finally:
+        conn.close()

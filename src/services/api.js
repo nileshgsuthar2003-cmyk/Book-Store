@@ -49,6 +49,12 @@ export const api = {
 
   getMe: () => request("/auth/me"),
 
+  updateProfile: (profileData) =>
+    request("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(profileData)
+    }),
+
   // Health
   checkHealth: () => request("/health"),
 

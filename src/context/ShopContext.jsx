@@ -1,0 +1,394 @@
+// eslint-disable-next-line react-refresh/only-export-components
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { ShopContext } from "./ShopContextInstance";
+import { BOOKS as FALLBACK_BOOKS } from "../data/booksData";
+import { api } from "../services/api";
+
+const loadFromStorage = (key, fallback) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.error(`Failed to load ${key} from storage`, e);
+    return fallback;
+  }
+};
+
+const saveToStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Failed to save ${key} to storage`, e);
+  }
+};
+
+export const ShopProvider = ({ children }) => {
+  const [books, setBooks] = useState(FALLBACK_BOOKS);
+  const [loadingBooks, setLoadingBooks] = useState(true);
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [backendStats, setBackendStats] = useState(null);
+
+  const [cart, setCart] = useState(() => loadFromStorage("bn-cart", {}));
+  const [wishlist, setWishlist] = useState(() => loadFromStorage("bn-wish", []));
+  const [lastOrder, setLastOrder] = useState(() => loadFromStorage("bn-order", null));
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [toast, setToast] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [sortBy, setSortBy] = useState("featured");
+  const [priceLimit, setPriceLimit] = useState(1000);
+  const [currentRoute, setCurrentRoute] = useState(() => {
+    if (window.location.hash) {
+      const clean = window.location.hash.replace(/^#\/?/, "/");
+      window.history.replaceState({}, "", clean === "/home" ? "/" : clean);
+      return clean === "/home" ? "/" : clean;
+    }
+    const path = window.location.pathname + window.location.search;
+    return path || "/";
+  });
+
+  // Keep storage in sync
+  useEffect(() => {
+    saveToStorage("bn-cart", cart);
+  }, [cart]);
+
+  useEffect(() => {
+    saveToStorage("bn-wish", wishlist);
+  }, [wishlist]);
+
+  // Load books from Flask Backend on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadInitialData() {
+      try {
+        const [healthRes, booksRes] = await Promise.all([
+          api.checkHealth().catch(() => null),
+          api.getBooks().catch(() => null)
+        ]);
+
+        if (!isMounted) return;
+
+        if (healthRes && healthRes.status === "healthy") {
+          setBackendOnline(true);
+          setBackendStats(healthRes.stats);
+        } else {
+          setBackendOnline(false);
+        }
+
+        if (booksRes && Array.isArray(booksRes.books) && booksRes.books.length > 0) {
+          setBooks(booksRes.books);
+        }
+      } catch (err) {
+        console.warn("Backend connection notice; using local fallback dataset:", err);
+      } finally {
+        if (isMounted) {
+          setLoadingBooks(false);
+        }
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const refreshBooks = useCallback(async () => {
+    setLoadingBooks(true);
+    try {
+      const [healthRes, booksRes] = await Promise.all([
+        api.checkHealth().catch(() => null),
+        api.getBooks().catch(() => null)
+      ]);
+
+      if (healthRes && healthRes.status === "healthy") {
+        setBackendOnline(true);
+        setBackendStats(healthRes.stats);
+      }
+
+      if (booksRes && Array.isArray(booksRes.books) && booksRes.books.length > 0) {
+        setBooks(booksRes.books);
+      }
+    } finally {
+      setLoadingBooks(false);
+    }
+  }, []);
+
+  // Route listener (HTML5 History API with popstate & hash fallback)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      if (window.location.hash) {
+        const clean = window.location.hash.replace(/^#\/?/, "/");
+        window.history.replaceState({}, "", clean === "/home" ? "/" : clean);
+        setCurrentRoute(clean === "/home" ? "/" : clean);
+      } else {
+        const path = window.location.pathname + window.location.search;
+        setCurrentRoute(path || "/");
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("hashchange", handleLocationChange);
+    };
+  }, []);
+
+  const navigate = useCallback((target) => {
+    if (!target) return;
+    let clean = target.replace(/^#\/?/, "");
+    if (!clean.startsWith("/")) {
+      clean = "/" + clean;
+    }
+    if (clean === "/home") clean = "/";
+
+    window.history.pushState({}, "", clean);
+    setCurrentRoute(clean);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const showToast = useCallback((message, type = "info") => {
+    setToast({ id: Date.now(), message, type });
+  }, []);
+
+  const clearToast = useCallback(() => {
+    setToast(null);
+  }, []);
+
+  const addToCart = useCallback((bookId, quantity = 1) => {
+    const book = books.find((b) => b.id === Number(bookId));
+    if (!book) return;
+    if (!book.stock) {
+      showToast("Sorry, this book is currently out of stock.", "warning");
+      return;
+    }
+
+    setCart((prev) => {
+      const current = prev[bookId] || 0;
+      return { ...prev, [bookId]: current + quantity };
+    });
+    showToast(`Added "${book.title}" to your book bag!`, "success");
+  }, [books, showToast]);
+
+  const removeFromCart = useCallback((bookId) => {
+    setCart((prev) => {
+      const next = { ...prev };
+      delete next[bookId];
+      return next;
+    });
+    showToast("Removed from your book bag.", "info");
+  }, [showToast]);
+
+  const updateQuantity = useCallback((bookId, delta) => {
+    setCart((prev) => {
+      const current = prev[bookId] || 0;
+      const nextQty = current + delta;
+      if (nextQty <= 0) {
+        const next = { ...prev };
+        delete next[bookId];
+        return next;
+      }
+      return { ...prev, [bookId]: nextQty };
+    });
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCart({});
+  }, []);
+
+  const toggleWishlist = useCallback((bookId) => {
+    const id = Number(bookId);
+    setWishlist((prev) => {
+      const exists = prev.includes(id);
+      const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
+      showToast(exists ? "Removed from wishlist" : "Saved to your reading wishlist ♥", "info");
+      return next;
+    });
+    // Async background sync with Flask backend if available
+    api.toggleWishlist(bookId).catch(() => {});
+  }, [showToast]);
+
+  const isInWishlist = useCallback((bookId) => {
+    return wishlist.includes(Number(bookId));
+  }, [wishlist]);
+
+  // Derived subtotal before discount
+  const cartSubtotal = useMemo(() => {
+    return Object.entries(cart).reduce((sum, [id, qty]) => {
+      const book = books.find((b) => b.id === Number(id));
+      return sum + (book ? book.price * qty : 0);
+    }, 0);
+  }, [cart, books]);
+
+  // Dynamic Coupon validation with Flask backend
+  const applyCoupon = useCallback(async (code) => {
+    const upper = (code || "").trim().toUpperCase();
+    if (!upper) return { success: false, message: "Please enter a coupon code." };
+
+    try {
+      // Call Flask Backend to validate coupon in SQLite database
+      const res = await api.validateCoupon(upper, cartSubtotal);
+      if (res.valid) {
+        setCouponCode(res.code);
+        setAppliedDiscount(res.discount);
+        showToast(`Discount applied: ${res.code} (−₹${res.discount})`, "success");
+        return { success: true, message: res.message };
+      } else {
+        showToast(res.message || "Invalid coupon code.", "warning");
+        return { success: false, message: res.message };
+      }
+    } catch (err) {
+      // Offline fallback
+      if (upper === "BOOK10") {
+        const disc = Math.round(cartSubtotal * 0.1);
+        setCouponCode("BOOK10");
+        setAppliedDiscount(disc);
+        showToast("Discount applied: BOOK10", "success");
+        return { success: true, message: "10% off applied!" };
+      } else if (upper === "WELCOME50" && cartSubtotal >= 499) {
+        setCouponCode("WELCOME50");
+        setAppliedDiscount(50);
+        showToast("Discount applied: WELCOME50", "success");
+        return { success: true, message: "₹50 off applied!" };
+      }
+      const msg = err.message || "Invalid promo code. Try BOOK10 or WELCOME50.";
+      showToast(msg, "warning");
+      return { success: false, message: msg };
+    }
+  }, [cartSubtotal, showToast]);
+
+  const removeCoupon = useCallback(() => {
+    setCouponCode("");
+    setAppliedDiscount(0);
+    showToast("Coupon removed.", "info");
+  }, [showToast]);
+
+  // Dynamic Order creation with Flask backend
+  const placeOrder = useCallback(async (customerData) => {
+    const shipping = !cartSubtotal || cartSubtotal >= 799 ? 0 : 49;
+    const itemsPayload = Object.entries(cart).map(([id, qty]) => ({
+      id: Number(id),
+      qty
+    }));
+
+    try {
+      // POST to Flask Backend
+      const res = await api.createOrder({
+        customer: customerData,
+        items: itemsPayload,
+        coupon: couponCode
+      });
+
+      if (res && res.order) {
+        const created = res.order;
+        saveToStorage("bn-order", created);
+        setLastOrder(created);
+        clearCart();
+        setCouponCode("");
+        setAppliedDiscount(0);
+        navigate("/order-confirmation");
+        showToast(`Order #${created.order_code} placed successfully!`, "success");
+        return created;
+      }
+    } catch (err) {
+      console.warn("Backend order creation fallback:", err);
+    }
+
+    // Fallback local creation if server unreachable
+    const discount = appliedDiscount;
+    const total = Math.max(0, cartSubtotal + shipping - discount);
+    const fallbackOrder = {
+      id: Math.floor(100000 + Math.random() * 900000),
+      order_code: `BN-${Math.floor(100000 + Math.random() * 900000)}`,
+      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      name: customerData.name,
+      email: customerData.email,
+      phone: customerData.phone,
+      address: `${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}`,
+      paymentMethod: customerData.paymentMethod || "Cash on delivery (demo)",
+      items: Object.entries(cart).map(([id, qty]) => {
+        const book = books.find((b) => b.id === Number(id));
+        return {
+          id: Number(id),
+          title: book?.title,
+          price: book?.price,
+          qty,
+          cover: book?.cover
+        };
+      }),
+      subtotal: cartSubtotal,
+      shipping,
+      discount,
+      total
+    };
+
+    saveToStorage("bn-order", fallbackOrder);
+    setLastOrder(fallbackOrder);
+    clearCart();
+    setCouponCode("");
+    setAppliedDiscount(0);
+    navigate("/order-confirmation");
+    showToast("Order placed successfully!", "success");
+    return fallbackOrder;
+  }, [cart, cartSubtotal, couponCode, appliedDiscount, books, clearCart, navigate, showToast]);
+
+  // Derived values
+  const cartItemCount = useMemo(() => {
+    return Object.values(cart).reduce((sum, q) => sum + q, 0);
+  }, [cart]);
+
+  const wishlistCount = wishlist.length;
+  const shippingFee = cartSubtotal === 0 || cartSubtotal >= 799 ? 0 : 49;
+  const discountAmount = appliedDiscount;
+  const cartTotal = Math.max(0, cartSubtotal + shippingFee - discountAmount);
+
+  const value = {
+    books,
+    loadingBooks,
+    backendOnline,
+    backendStats,
+    cart,
+    wishlist,
+    lastOrder,
+    couponCode,
+    toast,
+    searchQuery,
+    selectedCategory,
+    sortBy,
+    priceLimit,
+    currentRoute,
+    cartItemCount,
+    wishlistCount,
+    cartSubtotal,
+    shippingFee,
+    discountAmount,
+    cartTotal,
+    setSearchQuery,
+    setSelectedCategory,
+    setSortBy,
+    setPriceLimit,
+    navigate,
+    showToast,
+    clearToast,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    toggleWishlist,
+    isInWishlist,
+    applyCoupon,
+    removeCoupon,
+    placeOrder,
+    refreshBooks
+  };
+
+  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
+};
+
+export { ShopContext };
+// oxlint-disable-next-line react/only-export-components, react-refresh/only-export-components
+export { useShop } from "./useShop";
