@@ -31,6 +31,8 @@ def book_row_to_dict(row):
         "stock": bool(row["in_stock"]),
         "in_stock": bool(row["in_stock"]),
         "is_visible": bool(row.get("is_visible", 1)),
+        "units_sold": int(row.get("units_sold") or 0),
+        "times_sold": int(row.get("times_sold") or 0),
         "created_at": str(row.get("created_at", ""))
     }
 
@@ -40,7 +42,18 @@ def get_books():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            query = "SELECT * FROM books WHERE 1=1"
+            query = """
+                SELECT b.*,
+                       COALESCE(sales.units_sold, 0) as units_sold,
+                       COALESCE(sales.times_sold, 0) as times_sold
+                FROM books b
+                LEFT JOIN (
+                    SELECT book_id, SUM(quantity) as units_sold, COUNT(DISTINCT order_id) as times_sold
+                    FROM order_items
+                    GROUP BY book_id
+                ) sales ON sales.book_id = b.id
+                WHERE 1=1
+            """
             params = []
 
             # Visibility check:
@@ -50,54 +63,56 @@ def get_books():
             include_hidden = request.args.get("include_hidden") in ["1", "true", "True"] and is_admin
 
             if not include_hidden:
-                query += " AND is_visible = 1"
+                query += " AND b.is_visible = 1"
 
             # Search filter
             q = request.args.get("q") or request.args.get("search")
             if q and q.strip():
                 term = f"%{q.strip().lower()}%"
-                query += " AND (LOWER(title) LIKE %s OR LOWER(author) LIKE %s OR LOWER(category) LIKE %s OR isbn LIKE %s)"
+                query += " AND (LOWER(b.title) LIKE %s OR LOWER(b.author) LIKE %s OR LOWER(b.category) LIKE %s OR b.isbn LIKE %s)"
                 params.extend([term, term, term, term])
 
             # Category filter
             category = request.args.get("category")
             if category and category.strip():
-                query += " AND category = %s"
+                query += " AND b.category = %s"
                 params.append(category.strip())
 
             # Max price filter
             max_price = request.args.get("max_price")
             if max_price:
                 try:
-                    query += " AND price <= %s"
+                    query += " AND b.price <= %s"
                     params.append(float(max_price))
                 except ValueError:
                     pass
 
             # In stock filter
             if request.args.get("in_stock") in ["1", "true", "True"]:
-                query += " AND in_stock = 1"
+                query += " AND b.in_stock = 1"
 
             # Bestseller filter
             if request.args.get("best") in ["1", "true", "True"] or request.args.get("bestseller") in ["1", "true", "True"]:
-                query += " AND is_bestseller = 1"
+                query += " AND b.is_bestseller = 1"
 
             # New arrival filter
             if request.args.get("new") in ["1", "true", "True"] or request.args.get("new_arrival") in ["1", "true", "True"]:
-                query += " AND is_new_arrival = 1"
+                query += " AND b.is_new_arrival = 1"
 
             # Sorting
             sort_by = request.args.get("sort", "featured")
-            if sort_by == "low":
-                query += " ORDER BY price ASC"
+            if sort_by in ["sold", "sales", "bestselling"]:
+                query += " ORDER BY units_sold DESC, b.id ASC"
+            elif sort_by == "low":
+                query += " ORDER BY b.price ASC"
             elif sort_by == "high":
-                query += " ORDER BY price DESC"
+                query += " ORDER BY b.price DESC"
             elif sort_by == "rating":
-                query += " ORDER BY rating DESC"
+                query += " ORDER BY b.rating DESC"
             elif sort_by == "reviews":
-                query += " ORDER BY reviews_count DESC"
+                query += " ORDER BY b.reviews_count DESC"
             else:
-                query += " ORDER BY id ASC"
+                query += " ORDER BY b.id ASC"
 
             # Limit & offset
             limit = request.args.get("limit")
@@ -291,6 +306,41 @@ def toggle_book_visibility(book_id):
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"Failed to update visibility: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@books_bp.route("/<int:book_id>/bestseller", methods=["PATCH"])
+@admin_required
+def toggle_book_bestseller(book_id):
+    """Toggle or set whether a book is marked as a Bestseller."""
+    data = request.get_json() or {}
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, is_bestseller FROM books WHERE id = %s;", (book_id,))
+            book = cur.fetchone()
+            if not book:
+                return jsonify({"error": "Book not found."}), 404
+
+            # If explicit boolean passed, use it, else toggle
+            if "is_bestseller" in data:
+                new_bestseller = 1 if data["is_bestseller"] else 0
+            else:
+                new_bestseller = 0 if book["is_bestseller"] else 1
+
+            cur.execute("UPDATE books SET is_bestseller = %s WHERE id = %s;", (new_bestseller, book_id))
+        conn.commit()
+
+        status_label = "marked as Bestseller ⭐" if new_bestseller else "removed from Bestsellers"
+        return jsonify({
+            "success": True,
+            "book_id": book_id,
+            "is_bestseller": bool(new_bestseller),
+            "message": f"Book '{book['title']}' is now {status_label}."
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update bestseller status: {str(e)}"}), 500
     finally:
         conn.close()
 

@@ -25,7 +25,10 @@ import {
   Menu,
   Lock,
   Mail,
-  AlertCircle
+  AlertCircle,
+  Star,
+  Flame,
+  TrendingUp
 } from "lucide-react";
 
 export const AdminPanel = ({ currentPath = "admin" }) => {
@@ -71,6 +74,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
   const [bookSearch, setBookSearch] = useState("");
   const [bookCategory, setBookCategory] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState("all"); // 'all', 'visible', 'hidden'
+  const [bestsellerFilter, setBestsellerFilter] = useState("all"); // 'all', 'bestseller', 'regular'
+  const [salesSort, setSalesSort] = useState("default"); // 'default', 'high_sold', 'low_sold'
 
   // Modal states
   const [bookModalOpen, setBookModalOpen] = useState(false);
@@ -88,7 +93,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     description: "",
     cover_url: "",
     in_stock: true,
-    is_visible: true
+    is_visible: true,
+    is_bestseller: false
   });
 
   // Load all admin data
@@ -255,7 +261,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
       description: "",
       cover_url: "",
       in_stock: true,
-      is_visible: true
+      is_visible: true,
+      is_bestseller: false
     });
     setBookModalOpen(true);
   };
@@ -275,7 +282,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
       description: b.description,
       cover_url: b.cover || b.cover_url,
       in_stock: b.stock !== undefined ? b.stock : b.in_stock,
-      is_visible: b.is_visible !== undefined ? b.is_visible : true
+      is_visible: b.is_visible !== undefined ? b.is_visible : true,
+      is_bestseller: Boolean(b.is_bestseller || b.best)
     });
     setBookModalOpen(true);
   };
@@ -315,6 +323,28 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
       refreshBooks();
     } catch (err) {
       showToast(err.message || "Failed to update visibility.", "warning");
+    }
+  };
+
+  // Toggle Bestseller Status
+  const handleToggleBestseller = async (bookId, currentBestseller, title) => {
+    const newBestseller = !currentBestseller;
+    try {
+      await api.toggleBookBestseller(bookId, newBestseller);
+      showToast(
+        `"${title}" is now ${newBestseller ? "marked as Bestseller ⭐" : "removed from Bestsellers"}`,
+        newBestseller ? "success" : "info"
+      );
+      setBooks((prev) =>
+        prev.map((b) =>
+          b.id === bookId
+            ? { ...b, is_bestseller: newBestseller, best: newBestseller }
+            : b
+        )
+      );
+      refreshBooks();
+    } catch (err) {
+      showToast(err.message || "Failed to update bestseller status.", "warning");
     }
   };
 
@@ -377,24 +407,39 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     }
   };
 
-  // Filtered books for admin table
-  const filteredBooks = books.filter((b) => {
-    const q = bookSearch.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      b.title.toLowerCase().includes(q) ||
-      b.author.toLowerCase().includes(q) ||
-      b.isbn.includes(q);
+  // Filtered and sorted books for admin table
+  const filteredBooks = books
+    .filter((b) => {
+      const q = bookSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.isbn.includes(q);
 
-    const matchesCategory = !bookCategory || b.cat === bookCategory || b.category === bookCategory;
+      const matchesCategory = !bookCategory || b.cat === bookCategory || b.category === bookCategory;
 
-    const matchesVisibility =
-      visibilityFilter === "all" ||
-      (visibilityFilter === "visible" && b.is_visible) ||
-      (visibilityFilter === "hidden" && !b.is_visible);
+      const matchesVisibility =
+        visibilityFilter === "all" ||
+        (visibilityFilter === "visible" && b.is_visible) ||
+        (visibilityFilter === "hidden" && !b.is_visible);
 
-    return matchesSearch && matchesCategory && matchesVisibility;
-  });
+      const matchesBestseller =
+        bestsellerFilter === "all" ||
+        (bestsellerFilter === "bestseller" && (b.is_bestseller || b.best)) ||
+        (bestsellerFilter === "regular" && !b.is_bestseller && !b.best);
+
+      return matchesSearch && matchesCategory && matchesVisibility && matchesBestseller;
+    })
+    .sort((a, b) => {
+      if (salesSort === "high_sold") {
+        return (b.units_sold || 0) - (a.units_sold || 0);
+      }
+      if (salesSort === "low_sold") {
+        return (a.units_sold || 0) - (b.units_sold || 0);
+      }
+      return 0;
+    });
 
   return (
     <div className="admin-portal-app">
@@ -588,13 +633,37 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 </select>
 
                 <select value={visibilityFilter} onChange={(e) => setVisibilityFilter(e.target.value)}>
-                  <option value="all">All Books ({books.length})</option>
+                  <option value="all">All Visibility ({books.length})</option>
                   <option value="visible">
                     Visible Only ({books.filter((b) => b.is_visible).length})
                   </option>
                   <option value="hidden">
                     Hidden Only ({books.filter((b) => !b.is_visible).length})
                   </option>
+                </select>
+
+                <select
+                  value={bestsellerFilter}
+                  onChange={(e) => setBestsellerFilter(e.target.value)}
+                  className="bestseller-filter-select"
+                >
+                  <option value="all">All Books ({books.length})</option>
+                  <option value="bestseller">
+                    ⭐ Bestsellers ({books.filter((b) => b.is_bestseller || b.best).length})
+                  </option>
+                  <option value="regular">
+                    Regular Books ({books.filter((b) => !b.is_bestseller && !b.best).length})
+                  </option>
+                </select>
+
+                <select
+                  value={salesSort}
+                  onChange={(e) => setSalesSort(e.target.value)}
+                  className="sales-sort-select"
+                >
+                  <option value="default">Sort by Default</option>
+                  <option value="high_sold">🔥 Most Sold First</option>
+                  <option value="low_sold">Lowest Sold First</option>
                 </select>
 
                 <button className="btn btn-primary" onClick={handleOpenAddBook}>
@@ -612,6 +681,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                     <th>Category</th>
                     <th>Price</th>
                     <th>Stock Status</th>
+                    <th>Sold (Sales)</th>
+                    <th>Bestseller</th>
                     <th>Visibility (Catalog)</th>
                     <th>Actions</th>
                   </tr>
@@ -648,6 +719,56 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                         ) : (
                           <span className="status-pill out-of-stock">Out of Stock</span>
                         )}
+                      </td>
+                      <td>
+                        {/* Units and Times Sold */}
+                        <div className="sales-metric-cell">
+                          <span
+                            className={`sales-count-pill ${(b.units_sold || 0) > 0 ? "has-sales" : "zero-sales"}`}
+                          >
+                            {(b.units_sold || 0) > 0 ? (
+                              <>
+                                <Flame size={13} className="flame-icon" />
+                                <strong>{b.units_sold} sold</strong>
+                              </>
+                            ) : (
+                              <span>0 sold</span>
+                            )}
+                          </span>
+                          {(b.times_sold || 0) > 0 && (
+                            <small className="sales-orders-subtext">
+                              in {b.times_sold} order{b.times_sold > 1 ? "s" : ""}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        {/* Select as Bestseller or Regular */}
+                        <button
+                          className={`bestseller-toggle-btn ${
+                            b.is_bestseller || b.best ? "is-bestseller" : "not-bestseller"
+                          }`}
+                          onClick={() =>
+                            handleToggleBestseller(b.id, b.is_bestseller || b.best, b.title)
+                          }
+                          title={
+                            b.is_bestseller || b.best
+                              ? "Currently selected as Bestseller ⭐. Click to remove."
+                              : "Click to select and feature this book in Bestsellers ⭐"
+                          }
+                        >
+                          {b.is_bestseller || b.best ? (
+                            <>
+                              <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                              <span>Bestseller</span>
+                            </>
+                          ) : (
+                            <>
+                              <Star size={13} color="#94a3b8" />
+                              <span>Regular</span>
+                            </>
+                          )}
+                        </button>
                       </td>
                       <td>
                         {/* THE REQUESTED VISIBLE / NON-VISIBLE WORK */}
@@ -1070,6 +1191,21 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                     />
                     <span>
                       <strong>Visible in Store</strong> (Uncheck to keep hidden from customers)
+                    </span>
+                  </label>
+                </div>
+
+                <div className="field checkbox-field">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={bookFormData.is_bestseller}
+                      onChange={(e) =>
+                        setBookFormData({ ...bookFormData, is_bestseller: e.target.checked })
+                      }
+                    />
+                    <span>
+                      <strong>⭐ Mark as Bestseller</strong> (Feature in Bestsellers section)
                     </span>
                   </label>
                 </div>

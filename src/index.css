@@ -3562,6 +3562,81 @@ h1, h2, .serif {
   background: #fecaca;
 }
 
+/* Bestseller Toggle Button */
+.bestseller-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+
+.bestseller-toggle-btn.is-bestseller {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15);
+}
+
+.bestseller-toggle-btn.is-bestseller:hover {
+  background: #fde68a;
+}
+
+.bestseller-toggle-btn.not-bestseller {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.bestseller-toggle-btn.not-bestseller:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* Sales Metric Cell */
+.sales-metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sales-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.sales-count-pill.has-sales {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.sales-count-pill.zero-sales {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+}
+
+.sales-count-pill .flame-icon {
+  color: #ea580c;
+}
+
+.sales-orders-subtext {
+  font-size: 10px;
+  color: #78716c;
+}
+
 /* Action Buttons */
 .action-btns-group {
   display: flex;
@@ -4343,6 +4418,44 @@ h1, h2, .serif {
 
 .admin-portal-content .admin-book-modal label {
   color: #cbd5e1;
+}
+
+.admin-portal-content .bestseller-toggle-btn.is-bestseller {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+}
+
+.admin-portal-content .bestseller-toggle-btn.is-bestseller:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+.admin-portal-content .bestseller-toggle-btn.not-bestseller {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-portal-content .bestseller-toggle-btn.not-bestseller:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.admin-portal-content .sales-count-pill.has-sales {
+  background: rgba(234, 88, 12, 0.2);
+  color: #fb923c;
+  border-color: rgba(234, 88, 12, 0.35);
+}
+
+.admin-portal-content .sales-count-pill.zero-sales {
+  background: rgba(255, 255, 255, 0.04);
+  color: #64748b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.admin-portal-content .sales-orders-subtext {
+  color: #94a3b8;
 }
 
 /* --- Dedicated Standalone Admin Login Portal --- */

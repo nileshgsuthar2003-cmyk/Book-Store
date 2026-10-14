@@ -96,6 +96,12 @@ export const api = {
       body: JSON.stringify({ is_visible })
     }),
 
+  toggleBookBestseller: (id, is_bestseller) =>
+    request(`/books/${id}/bestseller`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_bestseller })
+    }),
+
   deleteBook: (id) =>
     request(`/books/${id}`, {
       method: "DELETE"
