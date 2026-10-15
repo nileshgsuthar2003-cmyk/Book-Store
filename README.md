@@ -24,17 +24,22 @@ book-store-main/
 │   ├── seed.py                    # Seeder with default Admin, Customer, 30 books, categories, coupons
 │   ├── run.py                     # Main server entrypoint (starts on http://127.0.0.1:5000)
 │   └── requirements.txt           # Flask, PyMySQL, Cryptography, PyJWT, python-dotenv
-├── src/
-│   ├── components/                # Header, Footer, BookCard, Toast, AuthModal
-│   ├── context/                   # AuthContext (Role auth state) & ShopContext (cart, catalog)
-│   ├── pages/                     # Home, Shop, BookDetail, Cart, Checkout, Wishlist, AdminPanel
-│   ├── services/
-│   │   └── api.js                 # API client with automatic Bearer token injection
-│   ├── App.jsx                    # Routing including #admin panel guard
-│   ├── main.jsx
-│   └── index.css                  # Modern Vanilla CSS design system
-├── vite.config.js                 # Proxy config forwarding /api -> http://127.0.0.1:5000
-└── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/            # Header, Footer, BookCard, Toast, AuthModal
+│   │   ├── context/               # AuthContext (Role auth state) & ShopContext (cart, catalog)
+│   │   ├── pages/                 # Home, Shop, BookDetail, Cart, Checkout, Wishlist, AdminPanel
+│   │   ├── services/
+│   │   │   └── api.js             # API client with automatic Bearer token injection
+│   │   ├── App.jsx                # Routing including #admin panel guard
+│   │   ├── main.jsx
+│   │   └── index.css              # Modern Vanilla CSS design system
+│   ├── public/                    # Static assets & brand media
+│   ├── index.html                 # Vite HTML entry
+│   ├── vite.config.js             # Proxy config forwarding /api -> http://127.0.0.1:5000
+│   └── package.json               # Frontend dependencies & scripts
+├── package.json                   # Root workspace scripts runner (delegates to frontend)
+└── README.md
 ```
 
 ---
@@ -116,8 +121,13 @@ python run.py    # Starts Flask server on http://127.0.0.1:5000
 
 ### 3. Start the React Frontend (Terminal 2)
 ```bash
+# Option A: Run directly inside frontend
+cd frontend
 npm install
 npm run dev      # Starts Vite dev server on http://localhost:5173
+
+# Option B: Run directly from project root
+npm run dev      # Automatically delegates to frontend/
 ```
 
 Open **[http://localhost:5173](http://localhost:5173)** in your browser:
