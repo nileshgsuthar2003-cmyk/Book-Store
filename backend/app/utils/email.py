@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def send_otp_email(to_email, otp_code, user_name="Book Lover"):
+def send_otp_email(to_email, otp_code, user_name="Book Lover", purpose="register"):
     """
     Send a 6-digit verification code to the recipient's email.
     Uses SMTP credentials from environment variables if provided.
@@ -15,9 +15,13 @@ def send_otp_email(to_email, otp_code, user_name="Book Lover"):
     smtp_pass = os.getenv("SMTP_PASS")
     sender_email = os.getenv("SMTP_FROM", smtp_user or "noreply@booknest.com")
 
+    is_forgot = purpose == "forgot_password"
+    action_title = "Password Reset Code" if is_forgot else "Email Verification Code"
+
     # Beautiful console logging for easy local testing
     print("\n" + "=" * 65)
-    print(f"📧 [BOOKNEST EMAIL VERIFICATION SERVICE]")
+    print(f"📧 [BOOKNEST {action_title.upper()} SERVICE]")
+    print(f"   Purpose:    {purpose}")
     print(f"   Recipient:  {to_email}")
     print(f"   User Name:  {user_name}")
     print(f"   OTP Code:   👉  {otp_code}  👈")
@@ -30,7 +34,17 @@ def send_otp_email(to_email, otp_code, user_name="Book Lover"):
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"{otp_code} is your BookNest email verification code"
+        if is_forgot:
+            msg["Subject"] = f"{otp_code} is your BookNest password reset code"
+            content_title = "Reset your password"
+            content_desc = "We received a request to reset your password for your <strong>BookNest</strong> account. Please use the 6-digit verification code below to set your new password:"
+            security_note = "⏱️ This code is valid for <strong>10 minutes</strong>. If you did not request a password reset, you can safely ignore this email and your password will remain unchanged."
+        else:
+            msg["Subject"] = f"{otp_code} is your BookNest email verification code"
+            content_title = "Verify your email address"
+            content_desc = "Welcome to <strong>BookNest</strong>! To complete creating your account, please enter the 6-digit verification code below:"
+            security_note = "⏱️ This verification code is valid for <strong>10 minutes</strong>. If you did not attempt to create an account on BookNest, please disregard this email."
+
         msg["From"] = f"BookNest <{sender_email}>"
         msg["To"] = to_email
 
@@ -60,16 +74,16 @@ def send_otp_email(to_email, otp_code, user_name="Book Lover"):
               <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 0;">FIND YOUR NEXT CHAPTER</p>
             </div>
             <div class="content">
-              <h2 class="title">Verify your email address</h2>
+              <h2 class="title">{content_title}</h2>
               <p class="text">Hello {user_name},</p>
               <p class="text">
-                Welcome to <strong>BookNest</strong>! To complete creating your account, please enter the 6-digit verification code below:
+                {content_desc}
               </p>
               <div class="otp-box">
                 <span class="otp-code">{otp_code}</span>
               </div>
               <p class="text" style="font-size: 12px; color: #64748b;">
-                ⏱️ This verification code is valid for <strong>10 minutes</strong>. If you did not attempt to create an account on BookNest, please disregard this email.
+                {security_note}
               </p>
             </div>
             <div class="footer">

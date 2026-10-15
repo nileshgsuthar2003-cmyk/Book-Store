@@ -28,11 +28,18 @@ def send_otp():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            # Check if email is already registered
+            # Check if email is already registered or exists
             if purpose == "register":
                 cur.execute("SELECT id FROM users WHERE email = %s;", (email,))
                 if cur.fetchone():
                     return jsonify({"error": "An account with this email address already exists. Please sign in instead."}), 409
+            elif purpose == "forgot_password":
+                cur.execute("SELECT id, name FROM users WHERE email = %s;", (email,))
+                user_match = cur.fetchone()
+                if not user_match:
+                    return jsonify({"error": "No account found with this email address."}), 404
+                if user_match.get("name"):
+                    name = user_match["name"]
 
             # Generate random 6-digit OTP
             otp_code = f"{random.randint(100000, 999999)}"
@@ -53,7 +60,7 @@ def send_otp():
         conn.commit()
 
         # Send email (or log to console if SMTP not configured)
-        send_otp_email(email, otp_code, name)
+        send_otp_email(email, otp_code, name, purpose=purpose)
 
         return jsonify({
             "success": True,
@@ -189,6 +196,67 @@ def login():
             "token": token,
             "user": user_info
         }), 200
+    finally:
+        conn.close()
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    """
+    Verify 6-digit OTP code and update user's password.
+    """
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    otp = (data.get("otp") or "").strip()
+    password = data.get("password") or ""
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Please enter a valid email address."}), 400
+
+    if not otp:
+        return jsonify({"error": "Verification code (OTP) is required."}), 400
+
+    if not password or len(password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters long."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # 1. Validate OTP from MySQL
+            cur.execute("""
+                SELECT id, expires_at FROM email_otps 
+                WHERE email = %s AND otp_code = %s AND purpose = 'forgot_password' AND is_used = 0
+                ORDER BY id DESC LIMIT 1;
+            """, (email, otp))
+            otp_record = cur.fetchone()
+
+            if not otp_record:
+                return jsonify({"error": "Invalid verification code. Please check and try again."}), 400
+
+            if otp_record["expires_at"] < datetime.now():
+                return jsonify({"error": "Verification code has expired. Please request a new code."}), 400
+
+            # 2. Check if user exists
+            cur.execute("SELECT id, name FROM users WHERE email = %s;", (email,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"error": "No account found with this email address."}), 404
+
+            # 3. Mark OTP as consumed
+            cur.execute("UPDATE email_otps SET is_used = 1 WHERE id = %s;", (otp_record["id"],))
+
+            # 4. Hash new password and update user record
+            pwd_hash = hash_password(password)
+            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s;", (pwd_hash, user["id"]))
+
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Password has been reset successfully! You can now sign in with your new password."
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to reset password: {str(e)}"}), 500
     finally:
         conn.close()
 

@@ -25,6 +25,7 @@ export const AuthModal = () => {
     closeAuthModal,
     login,
     register,
+    resetPassword,
     sendOtp
   } = useAuth();
   const { showToast } = useShop();
@@ -39,6 +40,14 @@ export const AuthModal = () => {
 
   // 'form' = filling name, email, password; 'otp' = verifying 6-digit email code
   const [registerStep, setRegisterStep] = useState("form");
+  
+  // Forgot password flow states
+  const [forgotStep, setForgotStep] = useState("email"); // 'email' | 'reset'
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [otpCode, setOtpCode] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -47,6 +56,7 @@ export const AuthModal = () => {
   const [error, setError] = useState("");
 
   const isLogin = authModalMode === "login";
+  const isForgot = authModalMode === "forgot";
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -70,9 +80,13 @@ export const AuthModal = () => {
         phone: "",
         password: ""
       });
+      setForgotEmail("");
+      setNewPassword("");
+      setConfirmPassword("");
       setOtpCode("");
       setError("");
       setRegisterStep("form");
+      setForgotStep("email");
     }
   }, [authModalOpen]);
 
@@ -80,19 +94,20 @@ export const AuthModal = () => {
   const handleTabSwitch = (mode) => {
     setAuthModalMode(mode);
     setRegisterStep("form");
+    setForgotStep("email");
     setOtpCode("");
     setError("");
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      password: ""
-    });
+    if (mode === "forgot") {
+      setForgotEmail(formData.email || "");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
   };
 
   const handleClose = () => {
     closeAuthModal();
     setRegisterStep("form");
+    setForgotStep("email");
     setOtpCode("");
     setError("");
     setFormData({
@@ -101,6 +116,9 @@ export const AuthModal = () => {
       phone: "",
       password: ""
     });
+    setForgotEmail("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   if (!authModalOpen) return null;
@@ -198,14 +216,14 @@ export const AuthModal = () => {
     }
   };
 
-  // Resend OTP code
+  // Resend OTP code for registration
   const handleResendOtp = async () => {
     if (resendTimer > 0 || sendingOtp) return;
     setError("");
     setSendingOtp(true);
 
     try {
-      const res = await sendOtp({
+      await sendOtp({
         email: formData.email,
         name: formData.name,
         phone: formData.phone.trim(),
@@ -221,6 +239,101 @@ export const AuthModal = () => {
     }
   };
 
+  // Forgot Password Step 1: Request OTP
+  const handleRequestForgotOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    const cleanEmail = forgotEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendOtp({
+        email: cleanEmail,
+        purpose: "forgot_password"
+      });
+      setForgotStep("reset");
+      setResendTimer(60);
+      showToast(`Verification code sent to ${cleanEmail}!`, "info");
+    } catch (err) {
+      setError(err.message || "No account found with this email address.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Forgot Password Resend OTP
+  const handleResendForgotOtp = async () => {
+    if (resendTimer > 0 || sendingOtp) return;
+    setError("");
+    setSendingOtp(true);
+
+    try {
+      await sendOtp({
+        email: forgotEmail.trim().toLowerCase(),
+        purpose: "forgot_password"
+      });
+      setResendTimer(60);
+      showToast(`New verification code sent to ${forgotEmail}!`, "success");
+    } catch (err) {
+      setError(err.message || "Failed to resend code.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  // Forgot Password Step 2: Verify OTP and set new password
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    const cleanOtp = otpCode.trim();
+    if (cleanOtp.length !== 6) {
+      setError("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match. Please re-enter.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await resetPassword({
+        email: forgotEmail.trim().toLowerCase(),
+        otp: cleanOtp,
+        password: newPassword
+      });
+
+      showToast(res.message || "Password reset successfully! Please sign in.", "success");
+      
+      // Pre-populate email in login form and switch to sign in view
+      setFormData((prev) => ({
+        ...prev,
+        email: forgotEmail.trim().toLowerCase(),
+        password: ""
+      }));
+      setAuthModalMode("login");
+      setForgotStep("email");
+      setOtpCode("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(err.message || "Failed to reset password. Please check the code and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-backdrop" onClick={handleClose} role="dialog" aria-modal="true">
       <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
@@ -232,17 +345,31 @@ export const AuthModal = () => {
         {/* Modal Header */}
         <div className="auth-header">
           <div className="auth-brand-badge">
-            {registerStep === "otp" && !isLogin ? <KeyRound size={20} /> : <Lock size={20} />}
+            {isForgot ? (
+              <KeyRound size={20} />
+            ) : registerStep === "otp" && !isLogin ? (
+              <KeyRound size={20} />
+            ) : (
+              <Lock size={20} />
+            )}
           </div>
           <h2>
-            {isLogin
+            {isForgot
+              ? forgotStep === "reset"
+                ? "Set New Password"
+                : "Reset Your Password"
+              : isLogin
               ? "Welcome to BookNest"
               : registerStep === "otp"
               ? "Verify Your Email"
               : "Join the Reading Circle"}
           </h2>
           <p>
-            {isLogin
+            {isForgot
+              ? forgotStep === "reset"
+                ? `Enter the 6-digit code sent to ${forgotEmail} and choose your new password.`
+                : "Enter your registered email address and we'll send you an OTP to reset your password."
+              : isLogin
               ? "Sign in to access your personal shelf, track orders, or manage the store."
               : registerStep === "otp"
               ? `Enter the 6-digit code sent to ${formData.email}`
@@ -250,8 +377,8 @@ export const AuthModal = () => {
           </p>
         </div>
 
-        {/* Tab Switcher (Visible unless in OTP verification step) */}
-        {registerStep !== "otp" && (
+        {/* Tab Switcher (Visible on login or initial register form) */}
+        {!isForgot && registerStep !== "otp" && (
           <div className="auth-tabs">
             <button
               className={`auth-tab ${isLogin ? "active" : ""}`}
@@ -301,7 +428,16 @@ export const AuthModal = () => {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="authPassword">Password</label>
+              <div className="field-label-row">
+                <label htmlFor="authPassword">Password</label>
+                <button
+                  type="button"
+                  className="forgot-link-btn"
+                  onClick={() => handleTabSwitch("forgot")}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="input-with-icon">
                 <Lock size={16} className="field-icon" />
                 <input
@@ -335,7 +471,7 @@ export const AuthModal = () => {
         {/* =========================================================================
             VIEW 2: CREATE ACCOUNT - STEP 1 (DETAILS)
             ========================================================================= */}
-        {!isLogin && registerStep === "form" && (
+        {!isLogin && !isForgot && registerStep === "form" && (
           <form className="auth-form" onSubmit={handleRequestOtp} autoComplete="off">
             <div className="auth-field">
               <label htmlFor="authName">Full Name</label>
@@ -423,7 +559,7 @@ export const AuthModal = () => {
         {/* =========================================================================
             VIEW 3: CREATE ACCOUNT - STEP 2 (EMAIL OTP VERIFICATION)
             ========================================================================= */}
-        {!isLogin && registerStep === "otp" && (
+        {!isLogin && !isForgot && registerStep === "otp" && (
           <form className="auth-form otp-step-form" onSubmit={handleVerifyOtpAndRegister}>
             <div className="otp-email-pill">
               <Mail size={15} />
@@ -500,9 +636,190 @@ export const AuthModal = () => {
           </form>
         )}
 
+        {/* =========================================================================
+            VIEW 4: FORGOT PASSWORD - STEP 1 (REQUEST OTP)
+            ========================================================================= */}
+        {isForgot && forgotStep === "email" && (
+          <form className="auth-form" onSubmit={handleRequestForgotOtp} autoComplete="off">
+            <div className="auth-field">
+              <label htmlFor="forgotEmail">Registered Email Address</label>
+              <div className="input-with-icon">
+                <Mail size={16} className="field-icon" />
+                <input
+                  id="forgotEmail"
+                  name="forgotEmail"
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={forgotEmail}
+                  onChange={(e) => {
+                    setForgotEmail(e.target.value);
+                    setError("");
+                  }}
+                  autoFocus
+                  autoComplete="email"
+                />
+              </div>
+              <small className="field-sub-note">We'll send a 6-digit password reset code to this email.</small>
+            </div>
+
+            <button type="submit" className="btn btn-primary full auth-submit-btn" disabled={loading}>
+              {loading ? "Sending Reset Code…" : "Send Reset Code →"}
+            </button>
+
+            <div className="otp-back-link-wrap">
+              <button
+                type="button"
+                className="back-step-btn"
+                onClick={() => handleTabSwitch("login")}
+              >
+                <ArrowLeft size={14} /> Back to Sign In
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* =========================================================================
+            VIEW 5: FORGOT PASSWORD - STEP 2 (VERIFY OTP & NEW PASSWORD)
+            ========================================================================= */}
+        {isForgot && forgotStep === "reset" && (
+          <form className="auth-form otp-step-form" onSubmit={handleResetPasswordSubmit} autoComplete="off">
+            <div className="otp-email-pill">
+              <Mail size={15} />
+              <span className="otp-email-target">{forgotEmail}</span>
+              <button
+                type="button"
+                className="otp-change-email-btn"
+                onClick={() => {
+                  setForgotStep("email");
+                  setError("");
+                }}
+                title="Change email address"
+              >
+                Edit
+              </button>
+            </div>
+
+            <div className="auth-field otp-input-field">
+              <label htmlFor="forgotOtpInput">Enter 6-Digit Reset Code</label>
+              <div className="otp-digit-wrapper">
+                <input
+                  id="forgotOtpInput"
+                  type="text"
+                  maxLength={6}
+                  placeholder="••••••"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="otp-code-input"
+                  autoFocus
+                  autoComplete="one-time-code"
+                />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="newPassword">New Password</label>
+              <div className="input-with-icon">
+                <Lock size={16} className="field-icon" />
+                <input
+                  id="newPassword"
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  placeholder="Minimum 6 characters"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setError("");
+                  }}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="pwd-toggle-btn"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  title={showNewPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="confirmPassword">Confirm New Password</label>
+              <div className="input-with-icon">
+                <Lock size={16} className="field-icon" />
+                <input
+                  id="confirmPassword"
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setError("");
+                  }}
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary full auth-submit-btn"
+              disabled={loading || otpCode.trim().length !== 6 || !newPassword || !confirmPassword}
+            >
+              {loading ? "Resetting Password…" : "Reset Password & Sign In →"}
+            </button>
+
+            {/* Resend Timer / Action */}
+            <div className="otp-resend-row">
+              {resendTimer > 0 ? (
+                <span className="timer-wait-text">
+                  Resend code in <strong>{resendTimer}s</strong>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="resend-action-btn"
+                  onClick={handleResendForgotOtp}
+                  disabled={sendingOtp}
+                >
+                  <RotateCcw size={13} className={sendingOtp ? "spin" : ""} />
+                  <span>{sendingOtp ? "Sending code…" : "Resend Code"}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="otp-back-link-wrap">
+              <button
+                type="button"
+                className="back-step-btn"
+                onClick={() => {
+                  setForgotStep("email");
+                  setError("");
+                }}
+              >
+                <ArrowLeft size={14} /> Back to email
+              </button>
+            </div>
+          </form>
+        )}
+
         {/* Footer Navigation */}
         <div className="auth-footer-note">
-          {isLogin ? (
+          {isForgot ? (
+            <span>
+              Remember your password?{" "}
+              <button
+                type="button"
+                className="switch-link"
+                onClick={() => handleTabSwitch("login")}
+              >
+                Back to sign in
+              </button>
+            </span>
+          ) : isLogin ? (
             <span>
               Don't have an account yet?{" "}
               <button

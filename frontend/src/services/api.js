@@ -60,6 +60,12 @@ export const api = {
     });
   },
 
+  resetPassword: ({ email, otp, password }) =>
+    request("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, otp, password })
+    }),
+
   getMe: () => request("/auth/me"),
 
   updateProfile: (profileData) =>

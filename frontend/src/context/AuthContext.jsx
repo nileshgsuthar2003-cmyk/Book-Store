@@ -122,6 +122,10 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.error || "Failed to update profile");
   }, []);
 
+  const resetPassword = useCallback(async ({ email, otp, password }) => {
+    return await api.resetPassword({ email, otp, password });
+  }, []);
+
   const value = {
     user,
     token,
@@ -135,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     setAuthModalMode,
     login,
     register,
+    resetPassword,
     sendOtp,
     logout,
     updateUserProfile

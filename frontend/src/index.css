@@ -3198,6 +3198,29 @@ h2,
   color: #57534e;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.forgot-link-btn {
+  background: none;
+  border: none;
+  color: #172554;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: var(--transition);
+}
+
+.forgot-link-btn:hover {
+  color: var(--terracotta);
+}
+
 /* Unified Input with icon */
 .input-with-icon {
   position: relative;
@@ -7466,15 +7489,17 @@ h2,
   gap: 14px;
 }
 
-.order-receipt-icon-badge {
+.order-receipt-icon-badge,
+.modal-brand-mark {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #fef3c7;
-  color: var(--amber-dark);
+  background: var(--amber);
+  color: var(--navy);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
 }
 
 .order-code-row {
@@ -8100,16 +8125,58 @@ h2,
     align-items: flex-start;
   }
 
-  .invoice-print-brand h2 {
-    margin: 0;
-    font-size: 20px;
-    color: #0f172a;
+  .invoice-print-brand .invoice-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    margin-bottom: 4px;
   }
 
-  .invoice-print-brand p {
-    margin: 4px 0 0 0;
+  .invoice-print-brand .brand-mark {
+    background: #f59e0b !important;
+    color: #172554 !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+    display: grid !important;
+    place-items: center !important;
+    flex-shrink: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .invoice-print-brand .brand-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .invoice-print-brand .brand-title {
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    color: #172554 !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  .invoice-print-brand .brand-accent {
+    color: #b45309 !important;
+  }
+
+  .invoice-print-brand small {
+    font-size: 9px !important;
+    letter-spacing: 1.6px !important;
+    color: #64748b !important;
+    font-weight: 700 !important;
+    margin-top: 3px !important;
+    text-transform: uppercase !important;
+  }
+
+  .invoice-doc-subtitle {
+    margin: 6px 0 0 0;
     font-size: 12px;
     color: #64748b;
+    font-weight: 500;
   }
 
   .invoice-print-meta {
