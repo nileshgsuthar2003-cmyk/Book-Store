@@ -404,6 +404,57 @@ def init_db():
         VALUES (1, 'Support & Care', 'Your Book Bag', '/cart', 'hello@booknest.example', 'Mon – Sat: 9am – 7pm IST', 'Use code BOOK10', '+91 (800) 266-5637');
         """)
 
+        # Store Reviews & Testimonials Table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS store_reviews (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(150) NOT NULL,
+            tagline VARCHAR(150) NOT NULL,
+            review_text TEXT NOT NULL,
+            rating INT DEFAULT 5,
+            avatar_text VARCHAR(10) DEFAULT '',
+            is_visible TINYINT(1) DEFAULT 1,
+            display_order INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        cur.execute("SELECT COUNT(*) as count FROM store_reviews;")
+        if cur.fetchone()["count"] == 0:
+            initial_reviews = [
+                (
+                    "Arundhati Roy",
+                    "Verified Reader • Bangalore",
+                    "BookNest reminds me of the charming independent bookstores I loved growing up. The curation is impeccable, and the packaging feels like receiving a thoughtful gift.",
+                    5,
+                    "A",
+                    1,
+                    1
+                ),
+                (
+                    "Rohan Verma",
+                    "Verified Reader • Mumbai",
+                    "Found Atomic Habits and Sapiens at lovely prices, and they arrived in mint condition within two days. BookNest is now my go-to reading corner.",
+                    5,
+                    "R",
+                    1,
+                    2
+                ),
+                (
+                    "Pooja Menon",
+                    "Verified Reader • Delhi",
+                    "The recommendations are genuinely thoughtful. It's not just algorithms pushing bestsellers—it's genuine passion for good literature.",
+                    5,
+                    "P",
+                    1,
+                    3
+                )
+            ]
+            cur.executemany("""
+                INSERT INTO store_reviews (name, tagline, review_text, rating, avatar_text, is_visible, display_order)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, initial_reviews)
+
     conn.commit()
     conn.close()
     print("MySQL database and tables successfully initialized.")

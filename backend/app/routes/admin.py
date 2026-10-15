@@ -621,3 +621,182 @@ def admin_update_support():
         return jsonify({"error": f"Failed to update support details: {str(e)}"}), 500
     finally:
         conn.close()
+
+# -------------------------------------------------------------------------
+# Customer Reviews & Testimonials Management
+# -------------------------------------------------------------------------
+@admin_bp.route("/reviews", methods=["GET"])
+@admin_required
+def admin_get_reviews():
+    """Retrieve all store reviews (visible and hidden) for admin management."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, name, tagline, review_text, rating, avatar_text, is_visible, display_order, created_at
+                FROM store_reviews
+                ORDER BY display_order ASC, id ASC;
+            """)
+            reviews = cur.fetchall()
+
+        return jsonify({
+            "reviews": [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "tagline": r["tagline"],
+                    "review_text": r["review_text"],
+                    "rating": r["rating"],
+                    "avatar_text": r.get("avatar_text") or (r["name"][:1].upper() if r.get("name") else "★"),
+                    "is_visible": bool(r["is_visible"]),
+                    "display_order": r.get("display_order", 0),
+                    "created_at": str(r.get("created_at") or "")
+                }
+                for r in reviews
+            ]
+        })
+    finally:
+        conn.close()
+
+@admin_bp.route("/reviews", methods=["POST"])
+@admin_required
+def admin_create_review():
+    """Add a new reader review / testimonial."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    tagline = (data.get("tagline") or "").strip()
+    review_text = (data.get("review_text") or "").strip()
+    rating = int(data.get("rating") or 5)
+    avatar_text = (data.get("avatar_text") or "").strip()
+    is_visible = 1 if data.get("is_visible", True) else 0
+    display_order = int(data.get("display_order") or 0)
+
+    if not name:
+        return jsonify({"error": "Reader / Reviewer name is required."}), 400
+    if not review_text:
+        return jsonify({"error": "Review content quote is required."}), 400
+    if not tagline:
+        tagline = "Verified Reader"
+    if not avatar_text and name:
+        avatar_text = name[0].upper()
+
+    rating = max(1, min(5, rating))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO store_reviews (name, tagline, review_text, rating, avatar_text, is_visible, display_order)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (name, tagline, review_text, rating, avatar_text, is_visible, display_order))
+            review_id = cur.lastrowid
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Review by '{name}' added successfully!",
+            "review": {
+                "id": review_id,
+                "name": name,
+                "tagline": tagline,
+                "review_text": review_text,
+                "rating": rating,
+                "avatar_text": avatar_text,
+                "is_visible": bool(is_visible),
+                "display_order": display_order
+            }
+        }), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to add review: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/reviews/<int:review_id>", methods=["PUT"])
+@admin_required
+def admin_update_review(review_id):
+    """Update an existing review."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    tagline = (data.get("tagline") or "").strip()
+    review_text = (data.get("review_text") or "").strip()
+    rating = int(data.get("rating") or 5)
+    avatar_text = (data.get("avatar_text") or "").strip()
+    is_visible = 1 if data.get("is_visible", True) else 0
+    display_order = int(data.get("display_order") or 0)
+
+    if not name or not review_text:
+        return jsonify({"error": "Reader name and review text are required."}), 400
+    if not tagline:
+        tagline = "Verified Reader"
+    if not avatar_text and name:
+        avatar_text = name[0].upper()
+
+    rating = max(1, min(5, rating))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE store_reviews
+                SET name = %s, tagline = %s, review_text = %s, rating = %s, avatar_text = %s, is_visible = %s, display_order = %s
+                WHERE id = %s;
+            """, (name, tagline, review_text, rating, avatar_text, is_visible, display_order, review_id))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Review by '{name}' updated successfully!"
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update review: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/reviews/<int:review_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_review(review_id):
+    """Delete a review."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM store_reviews WHERE id = %s;", (review_id,))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Review deleted successfully!"
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to delete review: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/reviews/<int:review_id>/toggle-visibility", methods=["PATCH"])
+@admin_required
+def admin_toggle_review_visibility(review_id):
+    """Toggle visibility status of a review."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT is_visible, name FROM store_reviews WHERE id = %s;", (review_id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "Review not found."}), 404
+
+            new_status = 0 if row["is_visible"] else 1
+            cur.execute("UPDATE store_reviews SET is_visible = %s WHERE id = %s;", (new_status, review_id))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "is_visible": bool(new_status),
+            "message": f"Review by '{row['name']}' is now {'visible on storefront' if new_status else 'hidden'}."
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to toggle visibility: {str(e)}"}), 500
+    finally:
+        conn.close()

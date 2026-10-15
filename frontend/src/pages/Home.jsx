@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useShop } from "../context/ShopContext";
 import { BookCard } from "../components/BookCard";
 import { CATEGORIES, CATEGORY_ICONS } from "../data/booksData";
 import { api } from "../services/api";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Home = () => {
   const {
@@ -13,10 +13,22 @@ export const Home = () => {
     showToast,
     categories,
     categoryIconMap,
-    hero
+    hero,
+    reviews
   } = useShop();
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const reviewTrackRef = useRef(null);
+
+  const scrollReviews = (direction) => {
+    if (reviewTrackRef.current) {
+      const scrollAmount = 380;
+      reviewTrackRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth"
+      });
+    }
+  };
 
   const bestsellers = books.filter((b) => b.best).slice(0, 5);
   const newArrivals = books.filter((b) => b.new).slice(0, 5);
@@ -256,62 +268,56 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Reader Reviews */}
-      <section className="section-soft">
+      {/* Reader Reviews (Community Voices) */}
+      <section className="section-soft reviews-section-wrapper">
         <div className="container">
-          <div className="section-head">
+          <div className="section-head reviews-section-head">
             <div>
               <span className="eyebrow">COMMUNITY VOICES</span>
               <h2>Loved by book lovers</h2>
               <p>Real stories from readers who found their sanctuary in BookNest.</p>
             </div>
+            <div className="carousel-nav-btns">
+              <button
+                type="button"
+                className="carousel-arrow-btn"
+                onClick={() => scrollReviews("left")}
+                aria-label="Previous reviews"
+                title="Scroll left"
+              >
+                <ChevronLeft size={19} />
+              </button>
+              <button
+                type="button"
+                className="carousel-arrow-btn"
+                onClick={() => scrollReviews("right")}
+                aria-label="Next reviews"
+                title="Scroll right"
+              >
+                <ChevronRight size={19} />
+              </button>
+            </div>
           </div>
 
-          <div className="review-grid">
-            <div className="review-card">
-              <div className="review-stars">★★★★★</div>
-              <blockquote>
-                "BookNest reminds me of the charming independent bookstores I loved growing up. The
-                curation is impeccable, and the packaging feels like receiving a thoughtful gift."
-              </blockquote>
-              <div className="review-person">
-                <div className="avatar">A</div>
-                <div>
-                  <strong>Arundhati Roy</strong>
-                  <small>Verified Reader • Bangalore</small>
+          <div className="review-carousel-track" ref={reviewTrackRef}>
+            {(reviews && reviews.length > 0 ? reviews : []).map((rev) => (
+              <div key={rev.id} className="review-card">
+                <div className="review-stars">
+                  {"★".repeat(Math.max(1, Math.min(5, rev.rating || 5)))}
+                  {"☆".repeat(5 - Math.max(1, Math.min(5, rev.rating || 5)))}
+                </div>
+                <blockquote>"{rev.review_text}"</blockquote>
+                <div className="review-person">
+                  <div className="avatar">
+                    {rev.avatar_text || (rev.name ? rev.name.charAt(0).toUpperCase() : "★")}
+                  </div>
+                  <div>
+                    <strong>{rev.name}</strong>
+                    <small>{rev.tagline || "Verified Reader"}</small>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="review-card">
-              <div className="review-stars">★★★★★</div>
-              <blockquote>
-                "Found Atomic Habits and Sapiens at lovely prices, and they arrived in mint
-                condition within two days. BookNest is now my go-to reading corner."
-              </blockquote>
-              <div className="review-person">
-                <div className="avatar">R</div>
-                <div>
-                  <strong>Rohan Verma</strong>
-                  <small>Verified Reader • Mumbai</small>
-                </div>
-              </div>
-            </div>
-
-            <div className="review-card">
-              <div className="review-stars">★★★★★</div>
-              <blockquote>
-                "The recommendations are genuinely thoughtful. It's not just algorithms pushing
-                bestsellers—it's genuine passion for good literature."
-              </blockquote>
-              <div className="review-person">
-                <div className="avatar">P</div>
-                <div>
-                  <strong>Pooja Menon</strong>
-                  <small>Verified Reader • Delhi</small>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

@@ -240,5 +240,27 @@ export const api = {
     request("/admin/support", {
       method: "PUT",
       body: JSON.stringify(data)
+    }),
+
+  // Customer Reviews & Community Voices API
+  getReviews: () => request("/reviews"),
+  getAdminReviews: () => request("/admin/reviews"),
+  createAdminReview: (data) =>
+    request("/admin/reviews", {
+      method: "POST",
+      body: JSON.stringify(data)
+    }),
+  updateAdminReview: (id, data) =>
+    request(`/admin/reviews/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    }),
+  deleteAdminReview: (id) =>
+    request(`/admin/reviews/${id}`, {
+      method: "DELETE"
+    }),
+  toggleAdminReviewVisibility: (id) =>
+    request(`/admin/reviews/${id}/toggle-visibility`, {
+      method: "PATCH"
     })
 };

@@ -345,3 +345,34 @@ def get_support():
         })
     finally:
         conn.close()
+
+@general_bp.route("/reviews", methods=["GET"])
+def get_public_reviews():
+    """Retrieve all visible reviews for the public storefront."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, name, tagline, review_text, rating, avatar_text, is_visible, display_order, created_at
+                FROM store_reviews
+                WHERE is_visible = 1
+                ORDER BY display_order ASC, id ASC;
+            """)
+            reviews = cur.fetchall()
+
+        return jsonify({
+            "reviews": [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "tagline": r["tagline"],
+                    "review_text": r["review_text"],
+                    "rating": r["rating"],
+                    "avatar_text": r.get("avatar_text") or (r["name"][:1].upper() if r.get("name") else "★"),
+                    "created_at": str(r.get("created_at") or "")
+                }
+                for r in reviews
+            ]
+        })
+    finally:
+        conn.close()

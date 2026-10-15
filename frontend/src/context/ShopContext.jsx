@@ -69,6 +69,36 @@ const DEFAULT_SUPPORT = {
   phone: "+91 (800) 266-5637"
 };
 
+const DEFAULT_REVIEWS = [
+  {
+    id: 1,
+    name: "Arundhati Roy",
+    tagline: "Verified Reader • Bangalore",
+    review_text: "BookNest reminds me of the charming independent bookstores I loved growing up. The curation is impeccable, and the packaging feels like receiving a thoughtful gift.",
+    rating: 5,
+    avatar_text: "A",
+    is_visible: true
+  },
+  {
+    id: 2,
+    name: "Rohan Verma",
+    tagline: "Verified Reader • Mumbai",
+    review_text: "Found Atomic Habits and Sapiens at lovely prices, and they arrived in mint condition within two days. BookNest is now my go-to reading corner.",
+    rating: 5,
+    avatar_text: "R",
+    is_visible: true
+  },
+  {
+    id: 3,
+    name: "Pooja Menon",
+    tagline: "Verified Reader • Delhi",
+    review_text: "The recommendations are genuinely thoughtful. It's not just algorithms pushing bestsellers—it's genuine passion for good literature.",
+    rating: 5,
+    avatar_text: "P",
+    is_visible: true
+  }
+];
+
 export const ShopProvider = ({ children }) => {
   const [books, setBooks] = useState(FALLBACK_BOOKS);
   const [loadingBooks, setLoadingBooks] = useState(true);
@@ -91,6 +121,11 @@ export const ShopProvider = ({ children }) => {
   const [supportInfo, setSupportInfo] = useState(() =>
     loadFromStorage("bn-support", DEFAULT_SUPPORT)
   );
+
+  const [reviews, setReviews] = useState(() =>
+    loadFromStorage("bn-reviews", DEFAULT_REVIEWS)
+  );
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   const [cart, setCart] = useState(() => loadFromStorage("bn-cart", {}));
   const [wishlist, setWishlist] = useState(() => loadFromStorage("bn-wish", []));
@@ -133,19 +168,24 @@ export const ShopProvider = ({ children }) => {
     saveToStorage("bn-support", supportInfo);
   }, [supportInfo]);
 
+  useEffect(() => {
+    saveToStorage("bn-reviews", reviews);
+  }, [reviews]);
+
   // Load books & announcement from Flask Backend on mount
   useEffect(() => {
     let isMounted = true;
 
     async function loadInitialData() {
       try {
-        const [healthRes, booksRes, announcementRes, categoriesRes, heroRes, supportRes] = await Promise.all([
+        const [healthRes, booksRes, announcementRes, categoriesRes, heroRes, supportRes, reviewsRes] = await Promise.all([
           api.checkHealth().catch(() => null),
           api.getBooks().catch(() => null),
           api.getAnnouncement().catch(() => null),
           api.getCategories().catch(() => null),
           api.getHero().catch(() => null),
-          api.getSupport().catch(() => null)
+          api.getSupport().catch(() => null),
+          api.getReviews().catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -179,6 +219,11 @@ export const ShopProvider = ({ children }) => {
           setSupportInfo(supportRes.support);
           saveToStorage("bn-support", supportRes.support);
         }
+
+        if (reviewsRes && Array.isArray(reviewsRes.reviews) && reviewsRes.reviews.length > 0) {
+          setReviews(reviewsRes.reviews);
+          saveToStorage("bn-reviews", reviewsRes.reviews);
+        }
       } catch (err) {
         console.warn("Backend connection notice; using local fallback dataset:", err);
       } finally {
@@ -192,6 +237,22 @@ export const ShopProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  const refreshReviews = useCallback(async () => {
+    setLoadingReviews(true);
+    try {
+      const res = await api.getReviews();
+      if (res && Array.isArray(res.reviews) && res.reviews.length > 0) {
+        setReviews(res.reviews);
+        saveToStorage("bn-reviews", res.reviews);
+        return res.reviews;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh reviews:", err);
+    } finally {
+      setLoadingReviews(false);
+    }
   }, []);
 
   const refreshCategories = useCallback(async () => {
@@ -557,7 +618,11 @@ export const ShopProvider = ({ children }) => {
     refreshHero,
     supportInfo,
     setSupportInfo,
-    refreshSupport
+    refreshSupport,
+    reviews,
+    setReviews,
+    loadingReviews,
+    refreshReviews
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

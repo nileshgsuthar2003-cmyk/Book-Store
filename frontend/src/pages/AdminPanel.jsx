@@ -251,7 +251,8 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     refreshHero,
     supportInfo,
     setSupportInfo,
-    refreshSupport
+    refreshSupport,
+    refreshReviews
   } = useShop();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -516,6 +517,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "orders") return "orders";
     if (sub === "announcement" || sub === "banner") return "announcement";
     if (sub === "hero" || sub === "banner-hero") return "hero";
+    if (sub === "reviews" || sub === "testimonials") return "reviews";
     if (sub === "policies" || sub === "legal" || sub === "terms" || sub === "privacy") return "policies";
     if (sub === "categories" || sub === "category" || sub === "shelves") return "categories";
     if (sub === "support" || sub === "care" || sub === "footer") return "support";
@@ -568,7 +570,10 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (activeTab === "support") {
       fetchSupportDetails();
     }
-  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories, refreshHero, fetchSupportDetails]);
+    if (activeTab === "reviews") {
+      fetchAdminReviews();
+    }
+  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories, refreshHero, fetchSupportDetails, fetchAdminReviews]);
 
   const handleTabChange = (tab) => {
     if (tab === "overview") {
@@ -687,22 +692,134 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     is_bestseller: false
   });
 
+  // Customer Reviews Management State
+  const [adminReviews, setAdminReviews] = useState([]);
+  const [loadingReviewsAdmin, setLoadingReviewsAdmin] = useState(false);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewVisibilityFilter, setReviewVisibilityFilter] = useState("all"); // 'all' | 'visible' | 'hidden'
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [reviewFormData, setReviewFormData] = useState({
+    name: "",
+    tagline: "Verified Reader",
+    review_text: "",
+    rating: 5,
+    avatar_text: "",
+    is_visible: true,
+    display_order: 0
+  });
+  const [savingReview, setSavingReview] = useState(false);
+
+  const fetchAdminReviews = useCallback(async () => {
+    setLoadingReviewsAdmin(true);
+    try {
+      const res = await api.getAdminReviews();
+      if (res && res.reviews) {
+        setAdminReviews(res.reviews);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch admin reviews:", err);
+    } finally {
+      setLoadingReviewsAdmin(false);
+    }
+  }, []);
+
+  const handleOpenAddReview = () => {
+    setEditingReview(null);
+    setReviewFormData({
+      name: "",
+      tagline: "Verified Reader",
+      review_text: "",
+      rating: 5,
+      avatar_text: "",
+      is_visible: true,
+      display_order: adminReviews.length + 1
+    });
+    setReviewModalOpen(true);
+  };
+
+  const handleOpenEditReview = (rev) => {
+    setEditingReview(rev);
+    setReviewFormData({
+      name: rev.name || "",
+      tagline: rev.tagline || "Verified Reader",
+      review_text: rev.review_text || "",
+      rating: rev.rating || 5,
+      avatar_text: rev.avatar_text || "",
+      is_visible: rev.is_visible !== undefined ? rev.is_visible : true,
+      display_order: rev.display_order || 0
+    });
+    setReviewModalOpen(true);
+  };
+
+  const handleSaveReview = async (e) => {
+    e.preventDefault();
+    if (!reviewFormData.name.trim() || !reviewFormData.review_text.trim()) {
+      showToast("Please provide both reviewer name and review text.", "warning");
+      return;
+    }
+    setSavingReview(true);
+    try {
+      if (editingReview) {
+        await api.updateAdminReview(editingReview.id, reviewFormData);
+        showToast(`Review by "${reviewFormData.name}" updated successfully!`, "success");
+      } else {
+        await api.createAdminReview(reviewFormData);
+        showToast(`New review by "${reviewFormData.name}" added successfully!`, "success");
+      }
+      setReviewModalOpen(false);
+      fetchAdminReviews();
+      if (refreshReviews) refreshReviews();
+    } catch (err) {
+      showToast(err.message || "Failed to save review.", "error");
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete the review by "${name}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteAdminReview(id);
+      showToast(`Review by "${name}" deleted.`, "info");
+      fetchAdminReviews();
+      if (refreshReviews) refreshReviews();
+    } catch (err) {
+      showToast(err.message || "Failed to delete review.", "error");
+    }
+  };
+
+  const handleToggleReviewVisibility = async (id, currentVis, name) => {
+    try {
+      await api.toggleAdminReviewVisibility(id);
+      showToast(`Review by "${name}" is now ${!currentVis ? "visible on homepage" : "hidden"}`, "info");
+      setAdminReviews((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, is_visible: !currentVis } : r))
+      );
+      if (refreshReviews) refreshReviews();
+    } catch (err) {
+      showToast(err.message || "Failed to toggle review visibility.", "error");
+    }
+  };
+
   // Load all admin data
   const loadAdminData = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      const [statsRes, booksRes, usersRes, ordersRes] = await Promise.all([
+      const [statsRes, booksRes, usersRes, ordersRes, reviewsRes] = await Promise.all([
         api.getAdminStats().catch(() => null),
         api.getBooks({ include_hidden: true }).catch(() => null),
         api.getAdminUsers().catch(() => null),
-        api.getOrders().catch(() => null)
+        api.getOrders().catch(() => null),
+        api.getAdminReviews().catch(() => null)
       ]);
 
       if (statsRes) setStats(statsRes);
       if (booksRes && booksRes.books) setBooks(booksRes.books);
       if (usersRes && usersRes.users) setUsers(usersRes.users);
       if (ordersRes && ordersRes.orders) setOrders(ordersRes.orders);
+      if (reviewsRes && reviewsRes.reviews) setAdminReviews(reviewsRes.reviews);
     } catch (err) {
       console.error("Failed to load admin data:", err);
       showToast("Error loading admin data.", "warning");
@@ -716,11 +833,12 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     const fetchInitial = async () => {
       if (!isAdmin) return;
       try {
-        const [statsRes, booksRes, usersRes, ordersRes] = await Promise.all([
+        const [statsRes, booksRes, usersRes, ordersRes, reviewsRes] = await Promise.all([
           api.getAdminStats().catch(() => null),
           api.getBooks({ include_hidden: true }).catch(() => null),
           api.getAdminUsers().catch(() => null),
-          api.getOrders().catch(() => null)
+          api.getOrders().catch(() => null),
+          api.getAdminReviews().catch(() => null)
         ]);
 
         if (!ignore) {
@@ -728,6 +846,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
           if (booksRes && booksRes.books) setBooks(booksRes.books);
           if (usersRes && usersRes.users) setUsers(usersRes.users);
           if (ordersRes && ordersRes.orders) setOrders(ordersRes.orders);
+          if (reviewsRes && reviewsRes.reviews) setAdminReviews(reviewsRes.reviews);
         }
       } catch (err) {
         if (!ignore) {
@@ -1031,6 +1150,22 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
       return 0;
     });
 
+  const filteredReviews = adminReviews
+    .filter((r) => {
+      const q = reviewSearch.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        (r.name && r.name.toLowerCase().includes(q)) ||
+        (r.tagline && r.tagline.toLowerCase().includes(q)) ||
+        (r.review_text && r.review_text.toLowerCase().includes(q));
+      const matchesVisibility =
+        reviewVisibilityFilter === "all" ||
+        (reviewVisibilityFilter === "visible" && r.is_visible) ||
+        (reviewVisibilityFilter === "hidden" && !r.is_visible);
+      return matchesSearch && matchesVisibility;
+    })
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
   return (
     <div className="admin-portal-app">
       {/* Mobile Drawer Backdrop */}
@@ -1122,6 +1257,15 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
           </button>
 
           <button
+            className={`admin-sidebar-link ${activeTab === "reviews" ? "active" : ""}`}
+            onClick={() => handleTabChange("reviews")}
+          >
+            <Star size={18} />
+            <span>Customer Reviews</span>
+            <span className="sidebar-count">{adminReviews.length}</span>
+          </button>
+
+          <button
             className={`admin-sidebar-link ${activeTab === "categories" ? "active" : ""}`}
             onClick={() => handleTabChange("categories")}
           >
@@ -1199,6 +1343,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 {activeTab === "orders" && "Customer Orders"}
                 {activeTab === "announcement" && "Store Announcement Banner"}
                 {activeTab === "hero" && "Homepage Hero Section"}
+                {activeTab === "reviews" && "Customer Reviews & Community Voices"}
                 {activeTab === "policies" && "Legal Policies (Terms & Privacy)"}
                 {activeTab === "support" && "Support & Care / Contact Information"}
               </strong>
@@ -1206,10 +1351,6 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
           </div>
 
           <div className="topbar-right">
-            <span className="topbar-mysql-badge" title="Connected to MySQL database">
-              <span className="mysql-pulse-dot"></span> MySQL Connected
-            </span>
-
             <button
               className="topbar-btn secondary"
               onClick={loadAdminData}
@@ -1220,9 +1361,15 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
               <span>{loading ? "Refreshing..." : "Refresh"}</span>
             </button>
 
-            <button className="topbar-btn primary" onClick={handleOpenAddBook}>
-              <Plus size={15} /> Add Book
-            </button>
+            {activeTab === "reviews" ? (
+              <button className="topbar-btn primary" onClick={handleOpenAddReview}>
+                <Plus size={15} /> Add Review
+              </button>
+            ) : (
+              <button className="topbar-btn primary" onClick={handleOpenAddBook}>
+                <Plus size={15} /> Add Book
+              </button>
+            )}
 
             <a
               href="/"
@@ -1649,58 +1796,188 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
         )}
 
         {/* =========================================================================
-            TAB 4: STORE ANALYTICS & OVERVIEW
+            TAB 4: STORE ANALYTICS & OVERVIEW (with Recent 10 Orders)
             ========================================================================= */}
-        {activeTab === "overview" && stats && (
+        {activeTab === "overview" && (
           <div className="admin-tab-panel">
-            <div className="admin-stats-grid">
-              <div className="admin-stat-card">
-                <div className="stat-icon-wrap revenue">
-                  <DollarSign size={24} />
+            {stats && (
+              <div className="admin-stats-grid">
+                <div className="admin-stat-card">
+                  <div className="stat-icon-wrap revenue">
+                    <DollarSign size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-label">Total Revenue</span>
+                    <h3>{formatPrice(stats.orders?.total_revenue || 0)}</h3>
+                    <small>From {stats.orders?.total_orders || 0} completed orders</small>
+                  </div>
                 </div>
-                <div>
-                  <span className="stat-label">Total Revenue</span>
-                  <h3>{formatPrice(stats.orders?.total_revenue || 0)}</h3>
-                  <small>From {stats.orders?.total_orders || 0} completed orders</small>
+
+                <div className="admin-stat-card">
+                  <div className="stat-icon-wrap orders">
+                    <Package size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-label">Total Orders</span>
+                    <h3>{stats.orders?.total_orders || 0}</h3>
+                    <small>{stats.orders?.pending_orders || 0} pending confirmation</small>
+                  </div>
                 </div>
+
+                <div className="admin-stat-card">
+                  <div className="stat-icon-wrap books">
+                    <BookOpen size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-label">Catalog Books</span>
+                    <h3>{stats.books?.total || 0}</h3>
+                    <small>
+                      {stats.books?.visible || 0} Visible • {stats.books?.hidden || 0} Hidden
+                    </small>
+                  </div>
+                </div>
+
+                <div className="admin-stat-card">
+                  <div className="stat-icon-wrap users">
+                    <Users size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-label">Registered Users</span>
+                    <h3>{stats.users?.total || 0}</h3>
+                    <small>
+                      {stats.users?.admins || 0} Admins • {stats.users?.customers || 0} Customers
+                    </small>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent 10 Customer Orders Section */}
+            <div className="admin-table-card dashboard-recent-orders-card">
+              <div className="table-header-row dashboard-recent-orders-header">
+                <div className="recent-orders-heading-wrap">
+                  <div className="stat-icon-wrap orders mini">
+                    <Package size={18} />
+                  </div>
+                  <div>
+                    <div className="recent-orders-title-row">
+                      <h2>Recent Orders</h2>
+                      <span className="recent-orders-badge">
+                        Recent {Math.min(orders.length, 10)} Orders
+                      </span>
+                    </div>
+                    <span className="recent-orders-subtitle">
+                      Latest customer transactions • Click any order code or details to inspect
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn-view-all-orders"
+                  onClick={() => handleTabChange("orders")}
+                  title="View all customer orders in the dedicated Orders tab"
+                >
+                  <span>View All Orders ({orders.length})</span>
+                  <ArrowRight size={15} />
+                </button>
               </div>
 
-              <div className="admin-stat-card">
-                <div className="stat-icon-wrap orders">
-                  <Package size={24} />
-                </div>
-                <div>
-                  <span className="stat-label">Total Orders</span>
-                  <h3>{stats.orders?.total_orders || 0}</h3>
-                  <small>{stats.orders?.pending_orders || 0} pending confirmation</small>
-                </div>
+              <div style={{ overflowX: "auto" }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Order Code</th>
+                      <th>Customer</th>
+                      <th>Items</th>
+                      <th>Total Amount</th>
+                      <th>Payment</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.slice(0, 10).map((o) => (
+                      <tr key={o.id}>
+                        <td>
+                          <button
+                            type="button"
+                            className="order-code-badge-btn"
+                            onClick={() => setViewingOrder(o)}
+                            title="Click to view full order details & print receipt/invoice"
+                          >
+                            #{o.order_code}
+                          </button>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{o.customer_name}</strong>
+                            <span className="cell-sub">{o.customer_email}</span>
+                            <span className="cell-sub">{o.customer_phone}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            className="items-summary-pill clickable"
+                            onClick={() => setViewingOrder(o)}
+                            title="Click to view items breakdown"
+                          >
+                            {o.items ? `${o.items.length} title(s)` : "Items record"}
+                          </span>
+                        </td>
+                        <td>
+                          <strong className="order-price">{formatPrice(o.total)}</strong>
+                        </td>
+                        <td>
+                          <span className="category-tag">{o.payment_method}</span>
+                        </td>
+                        <td className="date-cell">
+                          {o.date || o.created_at
+                            ? new Date(o.date || o.created_at).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                              })
+                            : "—"}
+                        </td>
+                        <td>
+                          <select
+                            className={`order-status-select ${o.status.toLowerCase()}`}
+                            value={o.status}
+                            onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
+                            title="Change order status"
+                          >
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-view-order-details"
+                            onClick={() => setViewingOrder(o)}
+                            title="View full order details, print invoice & receipt"
+                          >
+                            <Eye size={13} />
+                            <span>Details</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              <div className="admin-stat-card">
-                <div className="stat-icon-wrap books">
-                  <BookOpen size={24} />
+              {orders.length === 0 && (
+                <div className="empty-table-state" style={{ padding: "48px 20px" }}>
+                  <Package size={36} style={{ color: "var(--muted)", margin: "0 auto 10px", display: "block", opacity: 0.5 }} />
+                  <p>No orders placed yet. Customer orders will appear here automatically.</p>
                 </div>
-                <div>
-                  <span className="stat-label">Catalog Books</span>
-                  <h3>{stats.books?.total || 0}</h3>
-                  <small>
-                    {stats.books?.visible || 0} Visible • {stats.books?.hidden || 0} Hidden
-                  </small>
-                </div>
-              </div>
-
-              <div className="admin-stat-card">
-                <div className="stat-icon-wrap users">
-                  <Users size={24} />
-                </div>
-                <div>
-                  <span className="stat-label">Registered Users</span>
-                  <h3>{stats.users?.total || 0}</h3>
-                  <small>
-                    {stats.users?.admins || 0} Admins • {stats.users?.customers || 0} Customers
-                  </small>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -2877,6 +3154,189 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             </form>
           </div>
         )}
+
+        {/* =========================================================================
+            TAB: CUSTOMER REVIEWS (COMMUNITY VOICES) MANAGEMENT
+            ========================================================================= */}
+        {activeTab === "reviews" && (
+          <div className="admin-tab-panel">
+            {/* Stats Overview */}
+            <div className="admin-stats-grid reviews-stats-grid">
+              <div className="admin-stat-card">
+                <div className="stat-icon-badge amber">
+                  <Star size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-label">Total Testimonials</span>
+                  <strong className="stat-number">{adminReviews.length}</strong>
+                  <span className="stat-sub">Across customer storefront</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="stat-icon-badge emerald">
+                  <Eye size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-label">Visible on Homepage</span>
+                  <strong className="stat-number">
+                    {adminReviews.filter((r) => r.is_visible).length}
+                  </strong>
+                  <span className="stat-sub">Active in side-wise carousel</span>
+                </div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="stat-icon-badge navy">
+                  <Flame size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-label">Average Rating</span>
+                  <strong className="stat-number">
+                    {adminReviews.length > 0
+                      ? (
+                          adminReviews.reduce((sum, r) => sum + (r.rating || 5), 0) /
+                          adminReviews.length
+                        ).toFixed(1)
+                      : "5.0"}
+                    {" "}★
+                  </strong>
+                  <span className="stat-sub">Reader satisfaction score</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="admin-filter-bar">
+              <div className="admin-search-input">
+                <Search size={16} />
+                <input
+                  placeholder="Search reviews by name, location, keywords…"
+                  value={reviewSearch}
+                  onChange={(e) => setReviewSearch(e.target.value)}
+                />
+                {reviewSearch && (
+                  <button onClick={() => setReviewSearch("")} className="clear-search-btn">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-selects">
+                <select
+                  value={reviewVisibilityFilter}
+                  onChange={(e) => setReviewVisibilityFilter(e.target.value)}
+                >
+                  <option value="all">All Reviews ({adminReviews.length})</option>
+                  <option value="visible">
+                    Visible Only ({adminReviews.filter((r) => r.is_visible).length})
+                  </option>
+                  <option value="hidden">
+                    Hidden Only ({adminReviews.filter((r) => !r.is_visible).length})
+                  </option>
+                </select>
+
+                <button className="btn btn-primary" onClick={handleOpenAddReview}>
+                  <Plus size={15} /> Add New Review
+                </button>
+              </div>
+            </div>
+
+            {/* Reviews Cards Grid */}
+            <div className="admin-reviews-grid">
+              {filteredReviews.length === 0 ? (
+                <div className="admin-empty-state">
+                  <Star size={36} className="empty-icon" />
+                  <h3>No reviews found</h3>
+                  <p>
+                    {reviewSearch
+                      ? "No reviews match your search query."
+                      : "Click 'Add New Review' to create your first community testimonial."}
+                  </p>
+                  <button className="btn btn-primary" onClick={handleOpenAddReview}>
+                    <Plus size={15} /> Add First Review
+                  </button>
+                </div>
+              ) : (
+                filteredReviews.map((rev) => (
+                  <div
+                    key={rev.id}
+                    className={`admin-review-card ${!rev.is_visible ? "review-hidden" : ""}`}
+                  >
+                    <div className="admin-review-card-head">
+                      <div className="review-stars-badge">
+                        {"★".repeat(Math.max(1, Math.min(5, rev.rating || 5)))}
+                        {"☆".repeat(5 - Math.max(1, Math.min(5, rev.rating || 5)))}
+                      </div>
+                      <div className="admin-review-badges">
+                        <span
+                          className={`review-status-pill ${
+                            rev.is_visible ? "status-visible" : "status-hidden"
+                          }`}
+                        >
+                          {rev.is_visible ? "Visible" : "Hidden"}
+                        </span>
+                        {rev.display_order ? (
+                          <span className="order-pill" title="Display Order">
+                            #{rev.display_order}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <blockquote className="admin-review-quote">
+                      "{rev.review_text}"
+                    </blockquote>
+
+                    <div className="admin-review-footer">
+                      <div className="admin-review-author">
+                        <div className="avatar">
+                          {rev.avatar_text || (rev.name ? rev.name.charAt(0).toUpperCase() : "★")}
+                        </div>
+                        <div className="author-info">
+                          <strong>{rev.name}</strong>
+                          <small>{rev.tagline || "Verified Reader"}</small>
+                        </div>
+                      </div>
+
+                      <div className="admin-review-actions">
+                        <button
+                          className={`btn-icon-action ${rev.is_visible ? "btn-visible" : "btn-hidden"}`}
+                          onClick={() =>
+                            handleToggleReviewVisibility(rev.id, rev.is_visible, rev.name)
+                          }
+                          title={
+                            rev.is_visible
+                              ? "Hide from homepage carousel"
+                              : "Show in homepage carousel"
+                          }
+                        >
+                          {rev.is_visible ? <Eye size={15} /> : <EyeOff size={15} />}
+                        </button>
+
+                        <button
+                          className="btn-icon-action edit"
+                          onClick={() => handleOpenEditReview(rev)}
+                          title="Edit Review"
+                        >
+                          <Edit2 size={15} />
+                        </button>
+
+                        <button
+                          className="btn-icon-action delete"
+                          onClick={() => handleDeleteReview(rev.id, rev.name)}
+                          title="Delete Review"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
@@ -3166,6 +3626,214 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             );
           }}
         />
+      )}
+
+      {/* =========================================================================
+          ADD / EDIT REVIEW MODAL
+          ========================================================================= */}
+      {reviewModalOpen && (
+        <div className="modal-backdrop" onClick={() => setReviewModalOpen(false)}>
+          <div className="admin-review-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-with-icon">
+                <Star size={20} className="amber-icon" />
+                <div>
+                  <h2>{editingReview ? "Edit Community Review" : "Add New Community Review"}</h2>
+                  <p>Displayed in the 'Loved by book lovers' side-wise scrollable carousel.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setReviewModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveReview} className="admin-review-form">
+              <div className="admin-review-modal-body">
+                <div className="review-form-fields">
+                  <div className="admin-form-group">
+                    <label>
+                      Reader / Reviewer Name *
+                      <span className="field-hint">e.g. Arundhati Roy</span>
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Arundhati Roy"
+                      value={reviewFormData.name}
+                      onChange={(e) =>
+                        setReviewFormData({ ...reviewFormData, name: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>
+                      Tagline / Location / Role *
+                      <span className="field-hint">e.g. Verified Reader • Bangalore</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Verified Reader • Bangalore"
+                      value={reviewFormData.tagline}
+                      onChange={(e) =>
+                        setReviewFormData({ ...reviewFormData, tagline: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label>Star Rating</label>
+                      <div className="star-rating-selector">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            className={`star-select-btn ${
+                              star <= reviewFormData.rating ? "active" : ""
+                            }`}
+                            onClick={() =>
+                              setReviewFormData({ ...reviewFormData, rating: star })
+                            }
+                          >
+                            ★
+                          </button>
+                        ))}
+                        <span className="rating-num-label">({reviewFormData.rating} of 5 Stars)</span>
+                      </div>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label>
+                        Avatar Initial
+                        <span className="field-hint">Single letter</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={2}
+                        placeholder={
+                          reviewFormData.name
+                            ? reviewFormData.name.charAt(0).toUpperCase()
+                            : "A"
+                        }
+                        value={reviewFormData.avatar_text}
+                        onChange={(e) =>
+                          setReviewFormData({ ...reviewFormData, avatar_text: e.target.value })
+                        }
+                        className="short-avatar-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>
+                      Review Quote / Testimonial *
+                      <span className="field-hint">Authentic reader story or feedback</span>
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      placeholder="Write what this reader shared about their BookNest experience…"
+                      value={reviewFormData.review_text}
+                      onChange={(e) =>
+                        setReviewFormData({ ...reviewFormData, review_text: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="admin-form-row align-center">
+                    <div className="admin-form-group">
+                      <label>
+                        Display Order
+                        <span className="field-hint">Lower numbers appear first</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={999}
+                        value={reviewFormData.display_order}
+                        onChange={(e) =>
+                          setReviewFormData({
+                            ...reviewFormData,
+                            display_order: parseInt(e.target.value, 10) || 0
+                          })
+                        }
+                        className="short-order-input"
+                      />
+                    </div>
+
+                    <div className="admin-toggle-field">
+                      <label className="admin-toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={reviewFormData.is_visible}
+                          onChange={(e) =>
+                            setReviewFormData({
+                              ...reviewFormData,
+                              is_visible: e.target.checked
+                            })
+                          }
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                      <div className="toggle-label-wrap">
+                        <strong>Visible on Storefront</strong>
+                        <small>Publish immediately to homepage carousel</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Live Preview of Review Card */}
+                <div className="review-preview-col">
+                  <span className="preview-label">✦ Live Card Preview</span>
+                  <div className="review-card preview-card-styled">
+                    <div className="review-stars">
+                      {"★".repeat(Math.max(1, Math.min(5, reviewFormData.rating || 5)))}
+                      {"☆".repeat(5 - Math.max(1, Math.min(5, reviewFormData.rating || 5)))}
+                    </div>
+                    <blockquote>
+                      "{reviewFormData.review_text || "Your testimonial quote will appear here exactly as readers will see it on the storefront…"}"
+                    </blockquote>
+                    <div className="review-person">
+                      <div className="avatar">
+                        {reviewFormData.avatar_text ||
+                          (reviewFormData.name
+                            ? reviewFormData.name.charAt(0).toUpperCase()
+                            : "A")}
+                      </div>
+                      <div>
+                        <strong>{reviewFormData.name || "Reader Name"}</strong>
+                        <small>{reviewFormData.tagline || "Verified Reader • City"}</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setReviewModalOpen(false)}
+                  disabled={savingReview}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={savingReview}>
+                  {savingReview ? (
+                    "Saving Review…"
+                  ) : (
+                    <>
+                      <CheckCircle size={15} />{" "}
+                      {editingReview ? "Update Review" : "Publish Review"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
