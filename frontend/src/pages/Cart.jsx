@@ -223,7 +223,7 @@ export const Cart = () => {
               </button>
 
               <p className="summary-note">
-                ⓘ Demo store only. Orders are simulated for portfolio and demonstration purposes.
+                ✓ Free delivery on orders over ₹799. Safe & secure checkout.
               </p>
             </aside>
           </>

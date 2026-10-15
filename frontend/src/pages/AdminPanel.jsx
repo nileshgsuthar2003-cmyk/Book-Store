@@ -41,6 +41,7 @@ import {
   LayoutTemplate,
   ArrowRight
 } from "lucide-react";
+import { OrderDetailsModal } from "../components/OrderDetailsModal";
 
 const THEME_OPTIONS = [
   { id: "navy", name: "Midnight Navy", bg: "#0f172a", text: "#f8f5ed", accent: "#ffc45a" },
@@ -259,6 +260,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
   const [books, setBooks] = useState([]);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [viewingOrder, setViewingOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Announcement bar state
@@ -1509,13 +1511,21 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                     <th>Payment</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((o) => (
                     <tr key={o.id}>
                       <td>
-                        <strong>#{o.order_code}</strong>
+                        <button
+                          type="button"
+                          className="order-code-badge-btn"
+                          onClick={() => setViewingOrder(o)}
+                          title="Click to view full order details"
+                        >
+                          #{o.order_code}
+                        </button>
                       </td>
                       <td>
                         <div>
@@ -1525,7 +1535,11 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                         </div>
                       </td>
                       <td>
-                        <span className="items-summary-pill">
+                        <span
+                          className="items-summary-pill clickable"
+                          onClick={() => setViewingOrder(o)}
+                          title="Click to view items breakdown"
+                        >
                           {o.items ? `${o.items.length} title(s)` : "Items record"}
                         </span>
                       </td>
@@ -1534,7 +1548,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                       </td>
                       <td>{o.payment_method}</td>
                       <td className="date-cell">
-                        {o.date ? new Date(o.date).toLocaleDateString("en-IN") : "—"}
+                        {o.date || o.created_at ? new Date(o.date || o.created_at).toLocaleDateString("en-IN") : "—"}
                       </td>
                       <td>
                         <select
@@ -1548,6 +1562,17 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                           <option value="Delivered">Delivered</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-view-order-details"
+                          onClick={() => setViewingOrder(o)}
+                          title="View full order details, books, and delivery address"
+                        >
+                          <Eye size={13} />
+                          <span>Full Details</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -2880,6 +2905,20 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             </form>
           </div>
         </div>
+      )}
+      {/* Full Order Details & Invoice Receipt Modal */}
+      {viewingOrder && (
+        <OrderDetailsModal
+          order={viewingOrder}
+          onClose={() => setViewingOrder(null)}
+          isAdmin={true}
+          onUpdateStatus={async (orderId, newStatus) => {
+            await handleUpdateOrderStatus(orderId, newStatus);
+            setViewingOrder((prev) =>
+              prev && prev.id === orderId ? { ...prev, status: newStatus } : prev
+            );
+          }}
+        />
       )}
     </div>
   );

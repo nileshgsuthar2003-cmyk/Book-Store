@@ -16,14 +16,31 @@ import {
   Shield,
   Phone,
   Mail,
-  Home as HomeIcon
+  Home as HomeIcon,
+  Eye
 } from "lucide-react";
+import { OrderDetailsModal } from "../components/OrderDetailsModal";
 
 export const Profile = () => {
   const { user, isAuthenticated, updateUserProfile, openAuthModal } = useAuth();
-  const { navigate, showToast } = useShop();
+  const { currentRoute, navigate, showToast } = useShop();
 
-  const [activeTab, setActiveTab] = useState("profile"); // 'profile', 'security', 'orders'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const search = window.location.search;
+      if (search.includes("tab=orders") || window.location.hash.includes("orders")) {
+        return "orders";
+      }
+    }
+    return "profile";
+  });
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  useEffect(() => {
+    if (currentRoute && (currentRoute.includes("tab=orders") || currentRoute.includes("orders"))) {
+      setActiveTab("orders");
+    }
+  }, [currentRoute]);
 
   // Profile and Address Form State
   const [formData, setFormData] = useState({
@@ -608,12 +625,23 @@ export const Profile = () => {
                                     <img src={it.cover_url} alt={it.title} className="chip-cover" />
                                   )}
                                   <span className="chip-title">
-                                    {it.title} × {it.quantity}
+                                    {it.title} × {it.quantity || it.qty || 1}
                                   </span>
                                 </div>
                               ))}
                             </div>
                           )}
+
+                          <div className="user-order-actions-bar">
+                            <button
+                              type="button"
+                              className="btn-view-order-details"
+                              onClick={() => setSelectedOrder(ord)}
+                            >
+                              <Eye size={13} />
+                              <span>View Full Order Details & Receipt</span>
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -624,6 +652,15 @@ export const Profile = () => {
           </main>
         </div>
       </div>
+
+      {/* Full Order Details & Invoice Receipt Modal */}
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          isAdmin={false}
+        />
+      )}
     </div>
   );
 };

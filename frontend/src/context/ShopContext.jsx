@@ -447,7 +447,7 @@ export const ShopProvider = ({ children }) => {
       email: customerData.email,
       phone: customerData.phone,
       address: `${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}`,
-      paymentMethod: customerData.paymentMethod || "Cash on delivery (demo)",
+      paymentMethod: customerData.paymentMethod || "Cash on Delivery",
       items: Object.entries(cart).map(([id, qty]) => {
         const book = books.find((b) => b.id === Number(id));
         return {

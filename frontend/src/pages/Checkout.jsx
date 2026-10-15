@@ -16,7 +16,7 @@ export const Checkout = () => {
     city: user?.city || "",
     state: user?.state || "",
     pincode: user?.pincode || "",
-    paymentMethod: "Cash on delivery (demo)",
+    paymentMethod: "Cash on Delivery",
     saveAddress: true
   });
 
@@ -88,7 +88,7 @@ export const Checkout = () => {
           <span>Checkout</span>
         </nav>
         <h1>One step closer to story time</h1>
-        <p>Demo checkout only — simulate your order without real payment.</p>
+        <p>Complete your shipping and payment details to finalize your order.</p>
       </div>
 
       <div className="container">
@@ -98,7 +98,7 @@ export const Checkout = () => {
             <div className="notice">
               <ShieldCheck size={18} />
               <span>
-                <strong>Prototype checkout:</strong> No real payment will be charged and no physical goods will be shipped.
+                <strong>Safe & Secure Checkout:</strong> 100% authentic books with fast doorstep delivery.
               </span>
             </div>
 
@@ -212,20 +212,20 @@ export const Checkout = () => {
               </div>
             </div>
 
-            {/* Demo Payment */}
+            {/* Payment Method */}
             <div className="form-card">
-              <h2>3. Payment simulation</h2>
+              <h2>3. Payment method</h2>
               <label className="radio-card">
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="Cash on delivery (demo)"
-                  checked={formData.paymentMethod === "Cash on delivery (demo)"}
+                  value="Cash on Delivery"
+                  checked={formData.paymentMethod === "Cash on Delivery"}
                   onChange={handleChange}
                 />
                 <div>
-                  <strong>Cash on delivery (demo simulation)</strong>
-                  <p>Pay upon delivery in demo sandbox mode.</p>
+                  <strong>Cash on Delivery (COD)</strong>
+                  <p>Pay with cash or UPI upon delivery at your doorstep.</p>
                 </div>
               </label>
 
@@ -233,13 +233,13 @@ export const Checkout = () => {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="Card simulation"
-                  checked={formData.paymentMethod === "Card simulation"}
+                  value="Credit / Debit Card"
+                  checked={formData.paymentMethod === "Credit / Debit Card"}
                   onChange={handleChange}
                 />
                 <div>
-                  <strong>Simulated Credit / Debit Card</strong>
-                  <p>Fast test card authorization.</p>
+                  <strong>Credit / Debit Card</strong>
+                  <p>Pay securely with Visa, MasterCard, RuPay.</p>
                 </div>
               </label>
 
@@ -247,21 +247,21 @@ export const Checkout = () => {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="UPI / QR Simulation"
-                  checked={formData.paymentMethod === "UPI / QR Simulation"}
+                  value="UPI / QR (GPay, PhonePe, Paytm)"
+                  checked={formData.paymentMethod === "UPI / QR (GPay, PhonePe, Paytm)"}
                   onChange={handleChange}
                 />
                 <div>
-                  <strong>UPI / QR Simulation (GPay, PhonePe, Paytm)</strong>
-                  <p>Instant dummy verification.</p>
+                  <strong>UPI / QR (Google Pay, PhonePe, Paytm)</strong>
+                  <p>Instant and secure payment via any UPI app or QR code.</p>
                 </div>
               </label>
             </div>
 
             <button type="submit" className="btn btn-primary full place-order-btn" disabled={submitting}>
-              {submitting ? "Confirming demo order…" : (
+              {submitting ? "Placing your order…" : (
                 <>
-                  <Lock size={15} /> Place demo order ({formatPrice(cartTotal)}) →
+                  <Lock size={15} /> Place Order ({formatPrice(cartTotal)}) →
                 </>
               )}
             </button>
@@ -295,7 +295,7 @@ export const Checkout = () => {
 
             <div className="checkout-guarantee">
               <ShieldCheck size={18} />
-              <span>Safe & encrypted demo test environment</span>
+              <span>Safe & encrypted checkout • 100% genuine books</span>
             </div>
           </aside>
         </form>

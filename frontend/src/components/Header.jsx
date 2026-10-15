@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/useAuth";
-import { Search, Heart, ShoppingBag, Menu, X, BookOpen, User, Shield, LogOut } from "lucide-react";
+import { Search, Heart, ShoppingBag, Menu, X, BookOpen, User, Shield, LogOut, Package } from "lucide-react";
 
 export const Header = () => {
   const {
@@ -232,6 +232,13 @@ export const Header = () => {
                   onClick={(e) => handleNavClick(e, "/profile")}
                 >
                   <User size={15} /> Edit Profile & Address
+                </button>
+
+                <button
+                  className="dropdown-item"
+                  onClick={(e) => handleNavClick(e, "/profile?tab=orders")}
+                >
+                  <Package size={15} /> My Orders
                 </button>
 
                 {isAdmin && (
