@@ -29,6 +29,26 @@ const DEFAULT_CATEGORIES = CATEGORIES.map((name, idx) => ({
   count: 0
 }));
 
+const DEFAULT_HERO = {
+  eyebrow: "A world between the pages",
+  title_prefix: "Your next great read",
+  title_highlight: "starts here.",
+  description:
+    "Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere.",
+  primary_btn_text: "Explore Books",
+  primary_btn_url: "/shop",
+  secondary_btn_text: "Discover Bestsellers",
+  secondary_btn_url: "/shop?best=1",
+  feature_1: "Thoughtfully curated",
+  feature_2: "Lovely prices",
+  feature_3: "For every reader",
+  image_url:
+    "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85",
+  badge_icon: "✦",
+  badge_title: "30,000+ happy readers",
+  badge_subtitle: "and counting"
+};
+
 const DEFAULT_ANNOUNCEMENT = {
   is_enabled: true,
   lead_text: "A little something for your next chapter",
@@ -49,6 +69,10 @@ export const ShopProvider = ({ children }) => {
     loadFromStorage("bn-categories", DEFAULT_CATEGORIES)
   );
   const [loadingCategories, setLoadingCategories] = useState(false);
+
+  const [hero, setHero] = useState(() =>
+    loadFromStorage("bn-hero", DEFAULT_HERO)
+  );
 
   const [announcement, setAnnouncement] = useState(() =>
     loadFromStorage("bn-announcement", DEFAULT_ANNOUNCEMENT)
@@ -87,17 +111,22 @@ export const ShopProvider = ({ children }) => {
     saveToStorage("bn-announcement", announcement);
   }, [announcement]);
 
+  useEffect(() => {
+    saveToStorage("bn-hero", hero);
+  }, [hero]);
+
   // Load books & announcement from Flask Backend on mount
   useEffect(() => {
     let isMounted = true;
 
     async function loadInitialData() {
       try {
-        const [healthRes, booksRes, announcementRes, categoriesRes] = await Promise.all([
+        const [healthRes, booksRes, announcementRes, categoriesRes, heroRes] = await Promise.all([
           api.checkHealth().catch(() => null),
           api.getBooks().catch(() => null),
           api.getAnnouncement().catch(() => null),
-          api.getCategories().catch(() => null)
+          api.getCategories().catch(() => null),
+          api.getHero().catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -120,6 +149,11 @@ export const ShopProvider = ({ children }) => {
         if (categoriesRes && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
           setCategories(categoriesRes.categories);
           saveToStorage("bn-categories", categoriesRes.categories);
+        }
+
+        if (heroRes && heroRes.hero) {
+          setHero(heroRes.hero);
+          saveToStorage("bn-hero", heroRes.hero);
         }
       } catch (err) {
         console.warn("Backend connection notice; using local fallback dataset:", err);
@@ -204,6 +238,19 @@ export const ShopProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn("Failed to refresh announcement:", err);
+    }
+  }, []);
+
+  const refreshHero = useCallback(async () => {
+    try {
+      const res = await api.getHero();
+      if (res && res.hero) {
+        setHero(res.hero);
+        saveToStorage("bn-hero", res.hero);
+        return res.hero;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh hero:", err);
     }
   }, []);
 
@@ -483,7 +530,10 @@ export const ShopProvider = ({ children }) => {
     setCategories,
     announcement,
     setAnnouncement,
-    refreshAnnouncement
+    refreshAnnouncement,
+    hero,
+    setHero,
+    refreshHero
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

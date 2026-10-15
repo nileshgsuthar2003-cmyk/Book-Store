@@ -12,7 +12,8 @@ export const Home = () => {
     setSelectedCategory,
     showToast,
     categories,
-    categoryIconMap
+    categoryIconMap,
+    hero
   } = useShop();
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
@@ -47,57 +48,61 @@ export const Home = () => {
         <div className="container">
           <div className="hero-panel">
             <div className="hero-copy">
-              <span className="eyebrow">A world between the pages</span>
+              <span className="eyebrow">{hero?.eyebrow || "A world between the pages"}</span>
               <h1>
-                Your next great read <em>starts here.</em>
+                {hero?.title_prefix || "Your next great read"}{" "}
+                <em>{hero?.title_highlight || "starts here."}</em>
               </h1>
               <p>
-                Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated
-                editions for curious minds, night owls, and book lovers everywhere.
+                {hero?.description ||
+                  "Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere."}
               </p>
 
               <div className="hero-buttons">
                 <a
                   className="btn btn-primary"
-                  href="/shop"
+                  href={hero?.primary_btn_url || "/shop"}
                   onClick={(e) => {
                     e.preventDefault();
                     setSelectedCategory("");
-                    navigate("/shop");
+                    navigate(hero?.primary_btn_url || "/shop");
                   }}
                 >
-                  Explore Books <ArrowRight size={15} />
+                  {hero?.primary_btn_text || "Explore Books"} <ArrowRight size={15} />
                 </a>
                 <a
                   className="btn btn-secondary"
-                  href="/shop?best=1"
+                  href={hero?.secondary_btn_url || "/shop?best=1"}
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate("/shop?best=1");
+                    navigate(hero?.secondary_btn_url || "/shop?best=1");
                   }}
                 >
-                  Discover Bestsellers
+                  {hero?.secondary_btn_text || "Discover Bestsellers"}
                 </a>
               </div>
 
               <div className="trust-row">
-                <span>Thoughtfully curated</span>
-                <span>Lovely prices</span>
-                <span>For every reader</span>
+                {hero?.feature_1 && <span>{hero.feature_1}</span>}
+                {hero?.feature_2 && <span>{hero.feature_2}</span>}
+                {hero?.feature_3 && <span>{hero.feature_3}</span>}
               </div>
             </div>
 
             <div className="hero-visual">
               <img
                 className="hero-img"
-                src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85"
-                alt="A warm and welcoming sunlit library filled with books"
+                src={
+                  hero?.image_url ||
+                  "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85"
+                }
+                alt={hero?.title_prefix || "A warm and welcoming sunlit library filled with books"}
               />
               <div className="floating-note">
-                <span className="note-star">✦</span>
+                <span className="note-star">{hero?.badge_icon || "✦"}</span>
                 <div>
-                  <strong>30,000+ happy readers</strong>
-                  <span>and counting</span>
+                  <strong>{hero?.badge_title || "30,000+ happy readers"}</strong>
+                  <span>{hero?.badge_subtitle || "and counting"}</span>
                 </div>
               </div>
             </div>

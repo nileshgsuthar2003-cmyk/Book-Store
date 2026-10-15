@@ -37,7 +37,9 @@ import {
   FileText,
   ShieldCheck,
   FolderTree,
-  Layers
+  Layers,
+  LayoutTemplate,
+  ArrowRight
 } from "lucide-react";
 
 const THEME_OPTIONS = [
@@ -241,7 +243,10 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     categories = [],
     categoryNames = [],
     categoryIconMap = {},
-    refreshCategories
+    refreshCategories,
+    hero,
+    setHero,
+    refreshHero
   } = useShop();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -310,6 +315,60 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     };
     setAnnouncementForm(defaultData);
     showToast("Reset form to default banner. Click 'Save Announcement Changes' to apply.", "info");
+  };
+
+  // Homepage Hero Banner State
+  const DEFAULT_HERO_DATA = {
+    eyebrow: "A world between the pages",
+    title_prefix: "Your next great read",
+    title_highlight: "starts here.",
+    description:
+      "Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere.",
+    primary_btn_text: "Explore Books",
+    primary_btn_url: "/shop",
+    secondary_btn_text: "Discover Bestsellers",
+    secondary_btn_url: "/shop?best=1",
+    feature_1: "Thoughtfully curated",
+    feature_2: "Lovely prices",
+    feature_3: "For every reader",
+    image_url:
+      "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85",
+    badge_icon: "✦",
+    badge_title: "30,000+ happy readers",
+    badge_subtitle: "and counting"
+  };
+
+  const [heroForm, setHeroForm] = useState(DEFAULT_HERO_DATA);
+  const [savingHero, setSavingHero] = useState(false);
+
+  useEffect(() => {
+    if (hero) {
+      setHeroForm((prev) => ({
+        ...prev,
+        ...hero
+      }));
+    }
+  }, [hero]);
+
+  const handleSaveHero = async (e) => {
+    if (e) e.preventDefault();
+    setSavingHero(true);
+    try {
+      const res = await api.updateHero(heroForm);
+      if (res && res.hero) {
+        setHero(res.hero);
+      }
+      showToast("Homepage Hero Banner updated successfully!", "success");
+    } catch (err) {
+      showToast(err.message || "Failed to update hero banner.", "warning");
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
+  const handleResetHero = () => {
+    setHeroForm(DEFAULT_HERO_DATA);
+    showToast("Reset form to default hero banner. Click 'Save Hero Banner Changes' to commit.", "info");
   };
 
   // Policy Editor State (Terms & Conditions, Privacy Policy)
@@ -437,6 +496,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "users") return "users";
     if (sub === "orders") return "orders";
     if (sub === "announcement" || sub === "banner") return "announcement";
+    if (sub === "hero" || sub === "banner-hero") return "hero";
     if (sub === "policies" || sub === "legal" || sub === "terms" || sub === "privacy") return "policies";
     if (sub === "categories" || sub === "category" || sub === "shelves") return "categories";
     if (sub === "overview" || sub === "dashboard") return "overview";
@@ -452,7 +512,10 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (activeTab === "categories" && refreshCategories) {
       refreshCategories();
     }
-  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories]);
+    if (activeTab === "hero" && refreshHero) {
+      refreshHero();
+    }
+  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories, refreshHero]);
 
   const handleTabChange = (tab) => {
     if (tab === "overview") {
@@ -998,6 +1061,14 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
           </button>
 
           <button
+            className={`admin-sidebar-link ${activeTab === "hero" ? "active" : ""}`}
+            onClick={() => handleTabChange("hero")}
+          >
+            <LayoutTemplate size={18} />
+            <span>Hero Banner</span>
+          </button>
+
+          <button
             className={`admin-sidebar-link ${activeTab === "categories" ? "active" : ""}`}
             onClick={() => handleTabChange("categories")}
           >
@@ -1066,6 +1137,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 {activeTab === "users" && "User Accounts & Details"}
                 {activeTab === "orders" && "Customer Orders"}
                 {activeTab === "announcement" && "Store Announcement Banner"}
+                {activeTab === "hero" && "Homepage Hero Section"}
                 {activeTab === "policies" && "Legal Policies (Terms & Privacy)"}
               </strong>
             </div>
@@ -2189,6 +2261,348 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 8: HOMEPAGE HERO BANNER MANAGER
+            ========================================================================= */}
+        {activeTab === "hero" && (
+          <div className="admin-hero-panel">
+            <div className="admin-page-header">
+              <div>
+                <span className="header-eyebrow">HOMEPAGE BRANDING & CONVERSIONS</span>
+                <h1>Homepage Hero Section</h1>
+                <p>
+                  Customize the primary headline, persuasive copy, call-to-action buttons, trust assurances,
+                  and library imagery displayed at the top of your bookstore homepage.
+                </p>
+              </div>
+
+              <div className="header-actions">
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-preview-link"
+                >
+                  <ExternalLink size={14} />
+                  <span>Preview Storefront</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Live Interactive Preview Box */}
+            <div className="hero-preview-container">
+              <div className="preview-top-bar">
+                <span className="preview-indicator">
+                  <span className="live-dot"></span> LIVE HOMEPAGE PREVIEW
+                </span>
+                <span className="preview-hint">Updates in real time as you edit below</span>
+              </div>
+
+              <div className="hero-preview-canvas">
+                <div className="hero-panel preview-hero">
+                  <div className="hero-copy">
+                    <span className="eyebrow">{heroForm.eyebrow || "A world between the pages"}</span>
+                    <h1>
+                      {heroForm.title_prefix || "Your next great read"}{" "}
+                      <em>{heroForm.title_highlight || "starts here."}</em>
+                    </h1>
+                    <p>{heroForm.description || "Discover stories, ideas, and adventures worth getting lost in."}</p>
+
+                    <div className="hero-buttons">
+                      <span className="btn btn-primary preview-btn">
+                        {heroForm.primary_btn_text || "Explore Books"} <ArrowRight size={14} />
+                      </span>
+                      <span className="btn btn-secondary preview-btn">
+                        {heroForm.secondary_btn_text || "Discover Bestsellers"}
+                      </span>
+                    </div>
+
+                    <div className="trust-row">
+                      {heroForm.feature_1 && <span>{heroForm.feature_1}</span>}
+                      {heroForm.feature_2 && <span>{heroForm.feature_2}</span>}
+                      {heroForm.feature_3 && <span>{heroForm.feature_3}</span>}
+                    </div>
+                  </div>
+
+                  <div className="hero-visual">
+                    <img
+                      className="hero-img"
+                      src={heroForm.image_url || "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85"}
+                      alt="Hero preview visual"
+                    />
+                    <div className="floating-note">
+                      <span className="note-star">{heroForm.badge_icon || "✦"}</span>
+                      <div>
+                        <strong>{heroForm.badge_title || "30,000+ happy readers"}</strong>
+                        <span>{heroForm.badge_subtitle || "and counting"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hero Form */}
+            <form onSubmit={handleSaveHero} className="admin-hero-form">
+              <div className="hero-editor-sections">
+                {/* 1. Headline & Copy */}
+                <div className="hero-card-box">
+                  <div className="hero-card-header">
+                    <h3>Headlines & Copy</h3>
+                    <p>Main title and introductory messaging for first-time visitors</p>
+                  </div>
+                  <div className="hero-card-body">
+                    <div className="field">
+                      <label>Eyebrow Tag (Small Header)</label>
+                      <input
+                        type="text"
+                        value={heroForm.eyebrow}
+                        onChange={(e) => setHeroForm({ ...heroForm, eyebrow: e.target.value })}
+                        placeholder="e.g. A world between the pages"
+                      />
+                    </div>
+
+                    <div className="field-grid-2">
+                      <div className="field">
+                        <label>Main Title Lead</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.title_prefix}
+                          onChange={(e) => setHeroForm({ ...heroForm, title_prefix: e.target.value })}
+                          placeholder="e.g. Your next great read"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Title Highlight (Italic / Accent)</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.title_highlight}
+                          onChange={(e) => setHeroForm({ ...heroForm, title_highlight: e.target.value })}
+                          placeholder="e.g. starts here."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label>Subtitle / Description</label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={heroForm.description}
+                        onChange={(e) => setHeroForm({ ...heroForm, description: e.target.value })}
+                        placeholder="Describe your bookstore's selection and reading mission..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Action Buttons */}
+                <div className="hero-card-box">
+                  <div className="hero-card-header">
+                    <h3>Call-to-Action Buttons</h3>
+                    <p>Primary and secondary navigation buttons</p>
+                  </div>
+                  <div className="hero-card-body">
+                    <div className="field-grid-2">
+                      <div className="field">
+                        <label>Primary Button Label</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.primary_btn_text}
+                          onChange={(e) => setHeroForm({ ...heroForm, primary_btn_text: e.target.value })}
+                          placeholder="e.g. Explore Books"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Primary Button Link URL</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.primary_btn_url}
+                          onChange={(e) => setHeroForm({ ...heroForm, primary_btn_url: e.target.value })}
+                          placeholder="e.g. /shop"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field-grid-2">
+                      <div className="field">
+                        <label>Secondary Button Label</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.secondary_btn_text}
+                          onChange={(e) => setHeroForm({ ...heroForm, secondary_btn_text: e.target.value })}
+                          placeholder="e.g. Discover Bestsellers"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Secondary Button Link URL</label>
+                        <input
+                          type="text"
+                          required
+                          value={heroForm.secondary_btn_url}
+                          onChange={(e) => setHeroForm({ ...heroForm, secondary_btn_url: e.target.value })}
+                          placeholder="e.g. /shop?best=1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Assurances / Trust Features */}
+                <div className="hero-card-box">
+                  <div className="hero-card-header">
+                    <h3>Store Assurances (Trust Row)</h3>
+                    <p>Three confidence-boosting bullet points below the action buttons</p>
+                  </div>
+                  <div className="hero-card-body">
+                    <div className="field-grid-3">
+                      <div className="field">
+                        <label>Feature 1</label>
+                        <input
+                          type="text"
+                          value={heroForm.feature_1}
+                          onChange={(e) => setHeroForm({ ...heroForm, feature_1: e.target.value })}
+                          placeholder="e.g. Thoughtfully curated"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Feature 2</label>
+                        <input
+                          type="text"
+                          value={heroForm.feature_2}
+                          onChange={(e) => setHeroForm({ ...heroForm, feature_2: e.target.value })}
+                          placeholder="e.g. Lovely prices"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Feature 3</label>
+                        <input
+                          type="text"
+                          value={heroForm.feature_3}
+                          onChange={(e) => setHeroForm({ ...heroForm, feature_3: e.target.value })}
+                          placeholder="e.g. For every reader"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Visual Image & Presets */}
+                <div className="hero-card-box">
+                  <div className="hero-card-header">
+                    <h3>Hero Image & Presets</h3>
+                    <p>Right-side photography showcase</p>
+                  </div>
+                  <div className="hero-card-body">
+                    <div className="field">
+                      <label>Image Direct URL</label>
+                      <input
+                        type="url"
+                        required
+                        value={heroForm.image_url}
+                        onChange={(e) => setHeroForm({ ...heroForm, image_url: e.target.value })}
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    <div className="photo-preset-picker">
+                      <span className="preset-label">Quick Pick A Photo Preset:</span>
+                      <div className="photo-preset-grid">
+                        {[
+                          { label: "Warm Sunlit Library", url: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85" },
+                          { label: "Cozy Book Nook", url: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=85" },
+                          { label: "Vintage Open Book", url: "https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&w=900&q=85" },
+                          { label: "Wood Shelves Stack", url: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=900&q=85" },
+                          { label: "Modern Bookstore", url: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=900&q=85" }
+                        ].map((preset) => (
+                          <button
+                            key={preset.url}
+                            type="button"
+                            className={`preset-photo-btn ${heroForm.image_url === preset.url ? "active" : ""}`}
+                            onClick={() => setHeroForm({ ...heroForm, image_url: preset.url })}
+                          >
+                            <img src={preset.url} alt={preset.label} />
+                            <span>{preset.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Floating Trust Badge */}
+                <div className="hero-card-box">
+                  <div className="hero-card-header">
+                    <h3>Floating Social Proof Badge</h3>
+                    <p>The floating pill over the hero photo highlighting reader community size</p>
+                  </div>
+                  <div className="hero-card-body">
+                    <div className="field-grid-3">
+                      <div className="field">
+                        <label>Badge Icon Symbol</label>
+                        <input
+                          type="text"
+                          maxLength={5}
+                          value={heroForm.badge_icon}
+                          onChange={(e) => setHeroForm({ ...heroForm, badge_icon: e.target.value })}
+                          placeholder="e.g. ✦, ★, 📚"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Badge Primary Text</label>
+                        <input
+                          type="text"
+                          value={heroForm.badge_title}
+                          onChange={(e) => setHeroForm({ ...heroForm, badge_title: e.target.value })}
+                          placeholder="e.g. 30,000+ happy readers"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Badge Subtext</label>
+                        <input
+                          type="text"
+                          value={heroForm.badge_subtitle}
+                          onChange={(e) => setHeroForm({ ...heroForm, badge_subtitle: e.target.value })}
+                          placeholder="e.g. and counting"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="policy-action-bar">
+                <button
+                  type="button"
+                  className="btn-reset-policy"
+                  onClick={handleResetHero}
+                  disabled={savingHero}
+                >
+                  <RotateCcw size={15} />
+                  <span>Reset to Default</span>
+                </button>
+
+                <div className="actions-right">
+                  <button
+                    type="submit"
+                    className="btn-save-announcement"
+                    disabled={savingHero}
+                  >
+                    <CheckCircle size={16} />
+                    <span>{savingHero ? "Saving Hero Banner…" : "Save Hero Banner Changes"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         )}
         </div>
