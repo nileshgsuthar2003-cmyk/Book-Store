@@ -269,6 +269,133 @@ def update_announcement():
     finally:
         conn.close()
 
+@admin_bp.route("/hero", methods=["GET"])
+@admin_required
+def get_admin_hero():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_hero WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "id": 1,
+                "eyebrow": "A world between the pages",
+                "title_prefix": "Your next great read",
+                "title_highlight": "starts here.",
+                "description": "Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere.",
+                "primary_btn_text": "Explore Books",
+                "primary_btn_url": "/shop",
+                "secondary_btn_text": "Discover Bestsellers",
+                "secondary_btn_url": "/shop?best=1",
+                "feature_1": "Thoughtfully curated",
+                "feature_2": "Lovely prices",
+                "feature_3": "For every reader",
+                "image_url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85",
+                "badge_icon": "✦",
+                "badge_title": "30,000+ happy readers",
+                "badge_subtitle": "and counting"
+            }
+
+        return jsonify({
+            "hero": {
+                "id": row["id"],
+                "eyebrow": row["eyebrow"],
+                "title_prefix": row["title_prefix"],
+                "title_highlight": row["title_highlight"],
+                "description": row["description"],
+                "primary_btn_text": row["primary_btn_text"],
+                "primary_btn_url": row["primary_btn_url"],
+                "secondary_btn_text": row["secondary_btn_text"],
+                "secondary_btn_url": row["secondary_btn_url"],
+                "feature_1": row["feature_1"],
+                "feature_2": row["feature_2"],
+                "feature_3": row["feature_3"],
+                "image_url": row["image_url"],
+                "badge_icon": row["badge_icon"],
+                "badge_title": row["badge_title"],
+                "badge_subtitle": row["badge_subtitle"],
+                "updated_at": str(row.get("updated_at") or "")
+            }
+        })
+    finally:
+        conn.close()
+
+@admin_bp.route("/hero", methods=["PUT"])
+@admin_required
+def update_hero():
+    data = request.get_json() or {}
+    eyebrow = (data.get("eyebrow") or "A world between the pages").strip()
+    title_prefix = (data.get("title_prefix") or "Your next great read").strip()
+    title_highlight = (data.get("title_highlight") or "starts here.").strip()
+    description = (data.get("description") or "").strip()
+    primary_btn_text = (data.get("primary_btn_text") or "Explore Books").strip()
+    primary_btn_url = (data.get("primary_btn_url") or "/shop").strip()
+    secondary_btn_text = (data.get("secondary_btn_text") or "Discover Bestsellers").strip()
+    secondary_btn_url = (data.get("secondary_btn_url") or "/shop?best=1").strip()
+    feature_1 = (data.get("feature_1") or "Thoughtfully curated").strip()
+    feature_2 = (data.get("feature_2") or "Lovely prices").strip()
+    feature_3 = (data.get("feature_3") or "For every reader").strip()
+    image_url = (data.get("image_url") or "").strip()
+    badge_icon = (data.get("badge_icon") or "✦").strip()
+    badge_title = (data.get("badge_title") or "30,000+ happy readers").strip()
+    badge_subtitle = (data.get("badge_subtitle") or "and counting").strip()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO store_hero 
+                (id, eyebrow, title_prefix, title_highlight, description, primary_btn_text, primary_btn_url, secondary_btn_text, secondary_btn_url, feature_1, feature_2, feature_3, image_url, badge_icon, badge_title, badge_subtitle)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    eyebrow = VALUES(eyebrow),
+                    title_prefix = VALUES(title_prefix),
+                    title_highlight = VALUES(title_highlight),
+                    description = VALUES(description),
+                    primary_btn_text = VALUES(primary_btn_text),
+                    primary_btn_url = VALUES(primary_btn_url),
+                    secondary_btn_text = VALUES(secondary_btn_text),
+                    secondary_btn_url = VALUES(secondary_btn_url),
+                    feature_1 = VALUES(feature_1),
+                    feature_2 = VALUES(feature_2),
+                    feature_3 = VALUES(feature_3),
+                    image_url = VALUES(image_url),
+                    badge_icon = VALUES(badge_icon),
+                    badge_title = VALUES(badge_title),
+                    badge_subtitle = VALUES(badge_subtitle);
+            """, (eyebrow, title_prefix, title_highlight, description, primary_btn_text, primary_btn_url, secondary_btn_text, secondary_btn_url, feature_1, feature_2, feature_3, image_url, badge_icon, badge_title, badge_subtitle))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Homepage hero banner updated successfully!",
+            "hero": {
+                "id": 1,
+                "eyebrow": eyebrow,
+                "title_prefix": title_prefix,
+                "title_highlight": title_highlight,
+                "description": description,
+                "primary_btn_text": primary_btn_text,
+                "primary_btn_url": primary_btn_url,
+                "secondary_btn_text": secondary_btn_text,
+                "secondary_btn_url": secondary_btn_url,
+                "feature_1": feature_1,
+                "feature_2": feature_2,
+                "feature_3": feature_3,
+                "image_url": image_url,
+                "badge_icon": badge_icon,
+                "badge_title": badge_title,
+                "badge_subtitle": badge_subtitle
+            }
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update hero: {str(e)}"}), 500
+    finally:
+        conn.close()
+
 @admin_bp.route("/policies/<slug>", methods=["PUT"])
 @admin_required
 def update_policy(slug):
@@ -318,5 +445,120 @@ def update_policy(slug):
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"Failed to update policy: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/categories", methods=["POST"])
+@admin_required
+def create_category():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    icon = (data.get("icon") or "✦").strip()
+
+    if not name:
+        return jsonify({"error": "Category name is required."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM categories WHERE LOWER(name) = LOWER(%s);", (name,))
+            if cur.fetchone():
+                return jsonify({"error": f"Category '{name}' already exists."}), 400
+
+            cur.execute("INSERT INTO categories (name, icon) VALUES (%s, %s);", (name, icon))
+            new_id = cur.lastrowid
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Category '{name}' created successfully!",
+            "category": {"id": new_id, "name": name, "icon": icon, "count": 0}
+        }), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to create category: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/categories/<int:category_id>", methods=["PUT"])
+@admin_required
+def update_category(category_id):
+    data = request.get_json() or {}
+    new_name = (data.get("name") or "").strip()
+    new_icon = (data.get("icon") or "").strip()
+
+    if not new_name:
+        return jsonify({"error": "Category name cannot be empty."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name, icon FROM categories WHERE id = %s;", (category_id,))
+            current = cur.fetchone()
+            if not current:
+                return jsonify({"error": "Category not found."}), 404
+
+            old_name = current["name"]
+
+            # Check duplicate name with another id
+            cur.execute("SELECT id FROM categories WHERE LOWER(name) = LOWER(%s) AND id != %s;", (new_name, category_id))
+            if cur.fetchone():
+                return jsonify({"error": f"Another category named '{new_name}' already exists."}), 400
+
+            icon_to_save = new_icon if new_icon else current["icon"]
+            cur.execute("UPDATE categories SET name = %s, icon = %s WHERE id = %s;", (new_name, icon_to_save, category_id))
+
+            # If category name was renamed, update books table so books remain linked
+            if old_name != new_name:
+                cur.execute("UPDATE books SET category = %s WHERE category = %s;", (new_name, old_name))
+
+        conn.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Category updated to '{new_name}' successfully!",
+            "category": {"id": category_id, "name": new_name, "icon": icon_to_save}
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update category: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/categories/<int:category_id>", methods=["DELETE"])
+@admin_required
+def delete_category(category_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name FROM categories WHERE id = %s;", (category_id,))
+            cat = cur.fetchone()
+            if not cat:
+                return jsonify({"error": "Category not found."}), 404
+
+            cat_name = cat["name"]
+
+            cur.execute("SELECT COUNT(*) as cnt FROM books WHERE category = %s;", (cat_name,))
+            res = cur.fetchone()
+            book_cnt = res["cnt"] if res else 0
+
+            force = request.args.get("force", "false").lower() == "true"
+            if book_cnt > 0 and not force:
+                return jsonify({
+                    "error": f"Cannot delete '{cat_name}' because {book_cnt} book(s) belong to it. Reassign or delete those books first, or confirm force delete."
+                }), 400
+
+            if book_cnt > 0 and force:
+                cur.execute("UPDATE books SET category = 'General' WHERE category = %s;", (cat_name,))
+
+            cur.execute("DELETE FROM categories WHERE id = %s;", (category_id,))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Category '{cat_name}' deleted successfully!"
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to delete category: {str(e)}"}), 500
     finally:
         conn.close()

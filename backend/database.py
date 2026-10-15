@@ -217,6 +217,53 @@ def init_db():
         VALUES (1, 1, 'A little something for your next chapter', '—', 'Save up to 40% on selected reads', '✦ Free shipping on orders over ₹799', 'navy', '/shop');
         """)
 
+        # Store Homepage Hero Banner Table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS store_hero (
+            id INT PRIMARY KEY DEFAULT 1,
+            eyebrow VARCHAR(255) DEFAULT 'A world between the pages',
+            title_prefix VARCHAR(255) DEFAULT 'Your next great read',
+            title_highlight VARCHAR(255) DEFAULT 'starts here.',
+            description TEXT,
+            primary_btn_text VARCHAR(100) DEFAULT 'Explore Books',
+            primary_btn_url VARCHAR(255) DEFAULT '/shop',
+            secondary_btn_text VARCHAR(100) DEFAULT 'Discover Bestsellers',
+            secondary_btn_url VARCHAR(255) DEFAULT '/shop?best=1',
+            feature_1 VARCHAR(100) DEFAULT 'Thoughtfully curated',
+            feature_2 VARCHAR(100) DEFAULT 'Lovely prices',
+            feature_3 VARCHAR(100) DEFAULT 'For every reader',
+            image_url VARCHAR(500) DEFAULT 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85',
+            badge_icon VARCHAR(50) DEFAULT '✦',
+            badge_title VARCHAR(150) DEFAULT '30,000+ happy readers',
+            badge_subtitle VARCHAR(150) DEFAULT 'and counting',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        # Ensure default hero row exists
+        cur.execute("""
+        INSERT IGNORE INTO store_hero 
+        (id, eyebrow, title_prefix, title_highlight, description, primary_btn_text, primary_btn_url, secondary_btn_text, secondary_btn_url, feature_1, feature_2, feature_3, image_url, badge_icon, badge_title, badge_subtitle)
+        VALUES (
+            1,
+            'A world between the pages',
+            'Your next great read',
+            'starts here.',
+            'Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere.',
+            'Explore Books',
+            '/shop',
+            'Discover Bestsellers',
+            '/shop?best=1',
+            'Thoughtfully curated',
+            'Lovely prices',
+            'For every reader',
+            'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85',
+            '✦',
+            '30,000+ happy readers',
+            'and counting'
+        );
+        """)
+
         # Store Policies Table (Terms & Conditions, Privacy Policy)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS store_policies (

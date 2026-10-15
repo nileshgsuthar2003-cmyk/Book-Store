@@ -35,7 +35,9 @@ import {
   Globe,
   Check,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  FolderTree,
+  Layers
 } from "lucide-react";
 
 const THEME_OPTIONS = [
@@ -235,7 +237,11 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     currentRoute,
     announcement: globalAnnouncement,
     setAnnouncement: setGlobalAnnouncement,
-    refreshAnnouncement
+    refreshAnnouncement,
+    categories = [],
+    categoryNames = [],
+    categoryIconMap = {},
+    refreshCategories
   } = useShop();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -432,6 +438,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "orders") return "orders";
     if (sub === "announcement" || sub === "banner") return "announcement";
     if (sub === "policies" || sub === "legal" || sub === "terms" || sub === "privacy") return "policies";
+    if (sub === "categories" || sub === "category" || sub === "shelves") return "categories";
     if (sub === "overview" || sub === "dashboard") return "overview";
     return "overview";
   };
@@ -442,7 +449,10 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (activeTab === "policies") {
       fetchPolicy(activePolicySlug);
     }
-  }, [activeTab, activePolicySlug, fetchPolicy]);
+    if (activeTab === "categories" && refreshCategories) {
+      refreshCategories();
+    }
+  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories]);
 
   const handleTabChange = (tab) => {
     if (tab === "overview") {
@@ -451,6 +461,87 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
       navigate(`/admin/${tab}`);
     }
     setMobileSidebarOpen(false);
+  };
+
+  // Categories Management State & Handlers
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: "",
+    icon: "✦"
+  });
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  const handleOpenCategoryModal = (cat = null) => {
+    if (cat) {
+      setEditingCategory(cat);
+      setCategoryFormData({
+        name: cat.name || "",
+        icon: cat.icon || "✦"
+      });
+    } else {
+      setEditingCategory(null);
+      setCategoryFormData({
+        name: "",
+        icon: "✦"
+      });
+    }
+    setCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e) => {
+    if (e) e.preventDefault();
+    const trimmedName = categoryFormData.name.trim();
+    if (!trimmedName) {
+      showToast("Please enter a category name.", "warning");
+      return;
+    }
+    setSavingCategory(true);
+    try {
+      if (editingCategory) {
+        const res = await api.updateCategory(editingCategory.id, {
+          name: trimmedName,
+          icon: categoryFormData.icon.trim() || "✦"
+        });
+        showToast(res.message || "Category updated successfully!", "success");
+      } else {
+        const res = await api.createCategory({
+          name: trimmedName,
+          icon: categoryFormData.icon.trim() || "✦"
+        });
+        showToast(res.message || "Category created successfully!", "success");
+      }
+      if (refreshCategories) await refreshCategories();
+      await loadAdminData();
+      setCategoryModalOpen(false);
+    } catch (err) {
+      showToast(err.message || "Failed to save category.", "warning");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (cat) => {
+    const bookCount = cat.count || 0;
+    let force = false;
+    if (bookCount > 0) {
+      const confirmed = window.confirm(
+        `Warning: There are ${bookCount} book(s) under '${cat.name}'.\n\nDeleting this category will move those books to 'General'. Do you want to proceed?`
+      );
+      if (!confirmed) return;
+      force = true;
+    } else {
+      if (!window.confirm(`Are you sure you want to delete category '${cat.name}'?`)) return;
+    }
+
+    try {
+      const res = await api.deleteCategory(cat.id, force);
+      showToast(res.message || `Category '${cat.name}' deleted.`, "success");
+      if (refreshCategories) await refreshCategories();
+      await loadAdminData();
+    } catch (err) {
+      showToast(err.message || "Failed to delete category.", "warning");
+    }
   };
 
   // Filters for books
@@ -907,6 +998,15 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
           </button>
 
           <button
+            className={`admin-sidebar-link ${activeTab === "categories" ? "active" : ""}`}
+            onClick={() => handleTabChange("categories")}
+          >
+            <FolderTree size={18} />
+            <span>Store Categories</span>
+            <span className="sidebar-count">{categories.length}</span>
+          </button>
+
+          <button
             className={`admin-sidebar-link ${activeTab === "policies" ? "active" : ""}`}
             onClick={() => handleTabChange("policies")}
           >
@@ -962,6 +1062,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
               <strong>
                 {activeTab === "overview" && "Dashboard Overview"}
                 {activeTab === "books" && "Books Catalog & Visibility"}
+                {activeTab === "categories" && "Store Categories & Shelves"}
                 {activeTab === "users" && "User Accounts & Details"}
                 {activeTab === "orders" && "Customer Orders"}
                 {activeTab === "announcement" && "Store Announcement Banner"}
@@ -1029,7 +1130,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
               <div className="admin-selects">
                 <select value={bookCategory} onChange={(e) => setBookCategory(e.target.value)}>
                   <option value="">All Categories</option>
-                  {CATEGORIES.map((cat) => (
+                  {(categoryNames && categoryNames.length > 0 ? categoryNames : CATEGORIES).map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
@@ -1978,6 +2079,118 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             )}
           </div>
         )}
+
+        {/* =========================================================================
+            TAB 7: STORE CATEGORIES & SHELVES MANAGER
+            ========================================================================= */}
+        {activeTab === "categories" && (
+          <div className="admin-categories-panel">
+            <div className="admin-page-header">
+              <div>
+                <span className="header-eyebrow">STOREFRONT SHELVES & TAXONOMY</span>
+                <h1>Store Categories & Shelves</h1>
+                <p>
+                  Manage the browsing categories displayed on your homepage and shop filters.
+                  Customize symbols, rename shelves, or create new genres with real-time book counts.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn-create-category"
+                onClick={() => handleOpenCategoryModal()}
+              >
+                <Plus size={16} />
+                <span>Add New Category</span>
+              </button>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="category-metrics-grid">
+              <div className="category-metric-card">
+                <span className="metric-label">Total Shelves</span>
+                <span className="metric-value">{categories.length}</span>
+                <span className="metric-sub">Active categories</span>
+              </div>
+              <div className="category-metric-card">
+                <span className="metric-label">Populated Shelves</span>
+                <span className="metric-value">
+                  {categories.filter((c) => (c.count || 0) > 0).length}
+                </span>
+                <span className="metric-sub">Categories with books</span>
+              </div>
+              <div className="category-metric-card">
+                <span className="metric-label">Empty Shelves</span>
+                <span className="metric-value">
+                  {categories.filter((c) => !(c.count || 0)).length}
+                </span>
+                <span className="metric-sub">Awaiting books</span>
+              </div>
+            </div>
+
+            {/* Category Cards Grid */}
+            <div className="admin-categories-cards-grid">
+              {categories.map((cat, idx) => {
+                const bookCount = cat.count || 0;
+                return (
+                  <div key={cat.id || cat.name} className="admin-category-shelf-card">
+                    <div className="shelf-card-top">
+                      <div className={`shelf-icon-badge shelf-bg-${(idx % 4) + 1}`}>
+                        <span>{cat.icon || "✦"}</span>
+                      </div>
+                      <span className={`shelf-count-tag ${bookCount > 0 ? "has-books" : "empty"}`}>
+                        {bookCount} {bookCount === 1 ? "Book" : "Books"}
+                      </span>
+                    </div>
+
+                    <div className="shelf-card-body">
+                      <h3>{cat.name}</h3>
+                      <p className="shelf-preview-sub">
+                        {bookCount > 0
+                          ? `Active on homepage with ${bookCount} title${bookCount === 1 ? "" : "s"}.`
+                          : "Empty shelf. Assign books to make it visible with titles."}
+                      </p>
+                    </div>
+
+                    <div className="shelf-card-footer">
+                      <button
+                        type="button"
+                        className="shelf-action-btn edit"
+                        onClick={() => handleOpenCategoryModal(cat)}
+                        title="Edit Category Name & Icon"
+                      >
+                        <Edit2 size={13} />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="shelf-action-btn browse"
+                        onClick={() => {
+                          setBookCategory(cat.name);
+                          handleTabChange("books");
+                        }}
+                        title={`Filter book catalog by ${cat.name}`}
+                      >
+                        <Eye size={13} />
+                        <span>Books</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="shelf-action-btn delete"
+                        onClick={() => handleDeleteCategory(cat)}
+                        title="Delete Category"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
@@ -2022,7 +2235,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                     value={bookFormData.category}
                     onChange={(e) => setBookFormData({ ...bookFormData, category: e.target.value })}
                   >
-                    {CATEGORIES.map((cat) => (
+                    {(categoryNames && categoryNames.length > 0 ? categoryNames : CATEGORIES).map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
@@ -2157,6 +2370,97 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   {editingBook ? "Save Changes" : "Create Book"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          ADD / EDIT CATEGORY MODAL
+          ========================================================================= */}
+      {categoryModalOpen && (
+        <div className="modal-backdrop" onClick={() => setCategoryModalOpen(false)}>
+          <div className="admin-category-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingCategory ? `Edit Category: ${editingCategory.name}` : "Add New Category Shelf"}</h2>
+              <button className="modal-close-btn" onClick={() => setCategoryModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="admin-category-form">
+              <div className="field">
+                <label>Category / Shelf Name *</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Science Fiction, Philosophy, Manga, History..."
+                  value={categoryFormData.name}
+                  onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="field">
+                <label>Category Icon Symbol *</label>
+                <div className="icon-input-row">
+                  <div className="icon-preview-circle">
+                    {categoryFormData.icon || "✦"}
+                  </div>
+                  <input
+                    required
+                    type="text"
+                    maxLength={10}
+                    placeholder="e.g. ✧, ☼, 📚"
+                    value={categoryFormData.icon}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, icon: e.target.value })}
+                    className="icon-text-input"
+                  />
+                </div>
+              </div>
+
+              <div className="symbol-palette-field">
+                <span className="palette-label">Quick Pick A Symbol:</span>
+                <div className="symbol-pill-grid">
+                  {["✧", "☼", "↗", "⌘", "♙", "♡", "⌕", "✿", "✦", "★", "📚", "☕", "⚡", "🔮", "🎭", "🌍", "🎨", "🌿", "💡", "🏹", "🖋️", "🕊️"].map((sym) => (
+                    <button
+                      key={sym}
+                      type="button"
+                      className={`symbol-pill-btn ${categoryFormData.icon === sym ? "selected" : ""}`}
+                      onClick={() => setCategoryFormData({ ...categoryFormData, icon: sym })}
+                    >
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Preview on Homepage */}
+              <div className="category-live-preview-box">
+                <span className="preview-box-label">HOMEPAGE PREVIEW</span>
+                <div className="category-card preview-mode">
+                  <span className="category-art">{categoryFormData.icon || "✦"}</span>
+                  <strong>{categoryFormData.name || "Category Name"}</strong>
+                  <span className="category-count-badge">0 books</span>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setCategoryModalOpen(false)}
+                  disabled={savingCategory}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={savingCategory}
+                >
+                  {savingCategory ? "Saving..." : editingCategory ? "Update Category" : "Create Category"}
                 </button>
               </div>
             </form>

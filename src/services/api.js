@@ -187,5 +187,30 @@ export const api = {
     request(`/admin/policies/${slug}`, {
       method: "PUT",
       body: JSON.stringify(data)
+    }),
+
+  // Categories API
+  getCategories: () => request("/categories"),
+  createCategory: (data) =>
+    request("/admin/categories", {
+      method: "POST",
+      body: JSON.stringify(data)
+    }),
+  updateCategory: (id, data) =>
+    request(`/admin/categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data)
+    }),
+  deleteCategory: (id, force = false) =>
+    request(`/admin/categories/${id}?force=${Boolean(force)}`, {
+      method: "DELETE"
+    }),
+
+  // Homepage Hero Banner
+  getHero: () => request("/hero"),
+  updateHero: (data) =>
+    request("/admin/hero", {
+      method: "PUT",
+      body: JSON.stringify(data)
     })
 };

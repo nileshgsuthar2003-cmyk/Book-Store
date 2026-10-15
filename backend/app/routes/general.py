@@ -42,6 +42,14 @@ def get_categories():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+            # Auto-sync any category from books table that isn't yet in categories table
+            cur.execute("""
+                INSERT IGNORE INTO categories (name, icon)
+                SELECT DISTINCT category, '✦' FROM books 
+                WHERE category IS NOT NULL AND TRIM(category) != '';
+            """)
+            conn.commit()
+
             cur.execute("""
                 SELECT c.id, c.name, c.icon, COUNT(b.id) as book_count
                 FROM categories c
@@ -203,6 +211,58 @@ def get_announcement():
                 "tag_text": row["tag_text"],
                 "bg_theme": row["bg_theme"],
                 "link_url": row["link_url"] or "",
+                "updated_at": str(row.get("updated_at") or "")
+            }
+        })
+    finally:
+        conn.close()
+
+@general_bp.route("/hero", methods=["GET"])
+def get_hero():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_hero WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "id": 1,
+                "eyebrow": "A world between the pages",
+                "title_prefix": "Your next great read",
+                "title_highlight": "starts here.",
+                "description": "Discover stories, ideas, and adventures worth getting lost in. Thoughtfully curated editions for curious minds, night owls, and book lovers everywhere.",
+                "primary_btn_text": "Explore Books",
+                "primary_btn_url": "/shop",
+                "secondary_btn_text": "Discover Bestsellers",
+                "secondary_btn_url": "/shop?best=1",
+                "feature_1": "Thoughtfully curated",
+                "feature_2": "Lovely prices",
+                "feature_3": "For every reader",
+                "image_url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=900&q=85",
+                "badge_icon": "✦",
+                "badge_title": "30,000+ happy readers",
+                "badge_subtitle": "and counting"
+            }
+
+        return jsonify({
+            "hero": {
+                "id": row["id"],
+                "eyebrow": row["eyebrow"],
+                "title_prefix": row["title_prefix"],
+                "title_highlight": row["title_highlight"],
+                "description": row["description"],
+                "primary_btn_text": row["primary_btn_text"],
+                "primary_btn_url": row["primary_btn_url"],
+                "secondary_btn_text": row["secondary_btn_text"],
+                "secondary_btn_url": row["secondary_btn_url"],
+                "feature_1": row["feature_1"],
+                "feature_2": row["feature_2"],
+                "feature_3": row["feature_3"],
+                "image_url": row["image_url"],
+                "badge_icon": row["badge_icon"],
+                "badge_title": row["badge_title"],
+                "badge_subtitle": row["badge_subtitle"],
                 "updated_at": str(row.get("updated_at") or "")
             }
         })

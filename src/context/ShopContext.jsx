@@ -1,7 +1,7 @@
 // eslint-disable-next-line react-refresh/only-export-components
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ShopContext } from "./ShopContextInstance";
-import { BOOKS as FALLBACK_BOOKS } from "../data/booksData";
+import { BOOKS as FALLBACK_BOOKS, CATEGORIES, CATEGORY_ICONS } from "../data/booksData";
 import { api } from "../services/api";
 
 const loadFromStorage = (key, fallback) => {
@@ -22,6 +22,13 @@ const saveToStorage = (key, value) => {
   }
 };
 
+const DEFAULT_CATEGORIES = CATEGORIES.map((name, idx) => ({
+  id: idx + 1,
+  name,
+  icon: CATEGORY_ICONS[name] || "✦",
+  count: 0
+}));
+
 const DEFAULT_ANNOUNCEMENT = {
   is_enabled: true,
   lead_text: "A little something for your next chapter",
@@ -37,6 +44,11 @@ export const ShopProvider = ({ children }) => {
   const [loadingBooks, setLoadingBooks] = useState(true);
   const [backendOnline, setBackendOnline] = useState(false);
   const [backendStats, setBackendStats] = useState(null);
+
+  const [categories, setCategories] = useState(() =>
+    loadFromStorage("bn-categories", DEFAULT_CATEGORIES)
+  );
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   const [announcement, setAnnouncement] = useState(() =>
     loadFromStorage("bn-announcement", DEFAULT_ANNOUNCEMENT)
@@ -81,10 +93,11 @@ export const ShopProvider = ({ children }) => {
 
     async function loadInitialData() {
       try {
-        const [healthRes, booksRes, announcementRes] = await Promise.all([
+        const [healthRes, booksRes, announcementRes, categoriesRes] = await Promise.all([
           api.checkHealth().catch(() => null),
           api.getBooks().catch(() => null),
-          api.getAnnouncement().catch(() => null)
+          api.getAnnouncement().catch(() => null),
+          api.getCategories().catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -103,6 +116,11 @@ export const ShopProvider = ({ children }) => {
         if (announcementRes && announcementRes.announcement) {
           setAnnouncement(announcementRes.announcement);
         }
+
+        if (categoriesRes && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
+          setCategories(categoriesRes.categories);
+          saveToStorage("bn-categories", categoriesRes.categories);
+        }
       } catch (err) {
         console.warn("Backend connection notice; using local fallback dataset:", err);
       } finally {
@@ -118,12 +136,29 @@ export const ShopProvider = ({ children }) => {
     };
   }, []);
 
+  const refreshCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    try {
+      const res = await api.getCategories();
+      if (res && Array.isArray(res.categories) && res.categories.length > 0) {
+        setCategories(res.categories);
+        saveToStorage("bn-categories", res.categories);
+        return res.categories;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh categories:", err);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, []);
+
   const refreshBooks = useCallback(async () => {
     setLoadingBooks(true);
     try {
-      const [healthRes, booksRes] = await Promise.all([
+      const [healthRes, booksRes, catRes] = await Promise.all([
         api.checkHealth().catch(() => null),
-        api.getBooks().catch(() => null)
+        api.getBooks().catch(() => null),
+        api.getCategories().catch(() => null)
       ]);
 
       if (healthRes && healthRes.status === "healthy") {
@@ -134,10 +169,30 @@ export const ShopProvider = ({ children }) => {
       if (booksRes && Array.isArray(booksRes.books) && booksRes.books.length > 0) {
         setBooks(booksRes.books);
       }
+
+      if (catRes && Array.isArray(catRes.categories) && catRes.categories.length > 0) {
+        setCategories(catRes.categories);
+        saveToStorage("bn-categories", catRes.categories);
+      }
     } finally {
       setLoadingBooks(false);
     }
   }, []);
+
+  const categoryNames = useMemo(() => {
+    const names = (categories || []).map((c) => c.name).filter(Boolean);
+    return names.length > 0 ? names : CATEGORIES;
+  }, [categories]);
+
+  const categoryIconMap = useMemo(() => {
+    const map = { ...CATEGORY_ICONS };
+    (categories || []).forEach((c) => {
+      if (c && c.name && c.icon) {
+        map[c.name] = c.icon;
+      }
+    });
+    return map;
+  }, [categories]);
 
   const refreshAnnouncement = useCallback(async () => {
     try {
@@ -420,6 +475,12 @@ export const ShopProvider = ({ children }) => {
     removeCoupon,
     placeOrder,
     refreshBooks,
+    categories,
+    categoryNames,
+    categoryIconMap,
+    loadingCategories,
+    refreshCategories,
+    setCategories,
     announcement,
     setAnnouncement,
     refreshAnnouncement

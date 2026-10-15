@@ -6,7 +6,14 @@ import { api } from "../services/api";
 import { ArrowRight } from "lucide-react";
 
 export const Home = () => {
-  const { books, navigate, setSelectedCategory, showToast } = useShop();
+  const {
+    books,
+    navigate,
+    setSelectedCategory,
+    showToast,
+    categories,
+    categoryIconMap
+  } = useShop();
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
@@ -121,17 +128,38 @@ export const Home = () => {
           </div>
 
           <div className="category-grid">
-            {CATEGORIES.map((category) => (
-              <button
-                key={category}
-                className="category-card"
-                onClick={() => handleCategoryClick(category)}
-                aria-label={`Browse ${category}`}
-              >
-                <span className="category-art">{CATEGORY_ICONS[category] || "✦"}</span>
-                <strong>{category}</strong>
-              </button>
-            ))}
+            {(categories && categories.length > 0
+              ? categories
+              : CATEGORIES.map((cat, idx) => ({ id: idx, name: cat, icon: CATEGORY_ICONS[cat] || "✦" }))
+            ).map((catItem) => {
+              const catName = typeof catItem === "string" ? catItem : catItem.name;
+              const catIcon =
+                typeof catItem === "object" && catItem.icon
+                  ? catItem.icon
+                  : categoryIconMap[catName] || "✦";
+              const bookCount =
+                typeof catItem === "object" && typeof catItem.count === "number"
+                  ? catItem.count
+                  : null;
+
+              return (
+                <button
+                  key={catName}
+                  className="category-card"
+                  onClick={() => handleCategoryClick(catName)}
+                  aria-label={`Browse ${catName}`}
+                  title={`${catName}${bookCount !== null ? ` (${bookCount} books)` : ""}`}
+                >
+                  <span className="category-art">{catIcon}</span>
+                  <strong>{catName}</strong>
+                  {bookCount !== null && (
+                    <span className="category-count-badge">
+                      {bookCount} {bookCount === 1 ? "book" : "books"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -16,7 +16,8 @@ export const Shop = () => {
     setSortBy,
     priceLimit,
     setPriceLimit,
-    navigate
+    navigate,
+    categoryNames
   } = useShop();
 
   const [limit, setLimit] = useState(12);
@@ -175,7 +176,7 @@ export const Shop = () => {
               />
               <span>All Categories</span>
             </label>
-            {CATEGORIES.map((cat) => (
+            {(categoryNames && categoryNames.length > 0 ? categoryNames : CATEGORIES).map((cat) => (
               <label key={cat} className="filter-radio-label">
                 <input
                   type="radio"
