@@ -114,23 +114,36 @@ def create_order():
             "id": order_id,
             "order_code": order_code,
             "date": datetime.now().strftime("%d %b, %Y"),
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "customer_name": customer["name"],
+            "name": customer["name"],
             "customer_email": customer["email"],
+            "email": customer["email"],
             "customer_phone": customer["phone"],
+            "phone": customer["phone"],
             "address": f"{customer['address']}, {customer['city']}, {customer['state']} - {customer['pincode']}",
-            "payment_method": customer.get("paymentMethod", "Cash on delivery (demo)"),
+            "delivery_address": customer.get("address", ""),
+            "city": customer.get("city", ""),
+            "state": customer.get("state", ""),
+            "pincode": customer.get("pincode", ""),
+            "payment_method": customer.get("paymentMethod", "Cash on delivery"),
+            "paymentMethod": customer.get("paymentMethod", "Cash on delivery"),
             "subtotal": subtotal,
             "shipping": shipping_fee,
+            "shipping_fee": shipping_fee,
             "discount": discount,
             "total": total,
             "status": "Confirmed",
             "items": [
                 {
                     "id": it["book_id"],
+                    "book_id": it["book_id"],
                     "title": it["title"],
                     "price": it["price"],
                     "qty": it["quantity"],
-                    "cover": it["cover_url"]
+                    "quantity": it["quantity"],
+                    "cover": it["cover_url"],
+                    "cover_url": it["cover_url"]
                 }
                 for it in order_items_record
             ]
@@ -171,10 +184,15 @@ def get_orders():
                     "id": o["id"],
                     "order_code": o["order_code"],
                     "date": str(o["created_at"]),
+                    "created_at": str(o["created_at"]),
                     "customer_name": o["customer_name"],
                     "customer_email": o["customer_email"],
                     "customer_phone": o["customer_phone"],
                     "address": f"{o['delivery_address']}, {o['city']}, {o['state']} - {o['pincode']}",
+                    "delivery_address": o.get("delivery_address") or "",
+                    "city": o.get("city") or "",
+                    "state": o.get("state") or "",
+                    "pincode": o.get("pincode") or "",
                     "payment_method": o["payment_method"],
                     "subtotal": float(o["subtotal"]),
                     "shipping": float(o["shipping_fee"]),
@@ -187,7 +205,9 @@ def get_orders():
                             "title": it["title"],
                             "price": float(it["price"]),
                             "qty": it["quantity"],
-                            "cover": it["cover_url"]
+                            "quantity": it["quantity"],
+                            "cover": it["cover_url"],
+                            "cover_url": it["cover_url"]
                         }
                         for it in item_rows
                     ]
@@ -214,10 +234,15 @@ def get_order_by_code(order_code):
                 "id": o["id"],
                 "order_code": o["order_code"],
                 "date": str(o["created_at"]),
+                "created_at": str(o["created_at"]),
                 "customer_name": o["customer_name"],
                 "customer_email": o["customer_email"],
                 "customer_phone": o["customer_phone"],
                 "address": f"{o['delivery_address']}, {o['city']}, {o['state']} - {o['pincode']}",
+                "delivery_address": o.get("delivery_address") or "",
+                "city": o.get("city") or "",
+                "state": o.get("state") or "",
+                "pincode": o.get("pincode") or "",
                 "payment_method": o["payment_method"],
                 "subtotal": float(o["subtotal"]),
                 "shipping": float(o["shipping_fee"]),
@@ -230,7 +255,9 @@ def get_order_by_code(order_code):
                         "title": it["title"],
                         "price": float(it["price"]),
                         "qty": it["quantity"],
-                        "cover": it["cover_url"]
+                        "quantity": it["quantity"],
+                        "cover": it["cover_url"],
+                        "cover_url": it["cover_url"]
                     }
                     for it in item_rows
                 ]
