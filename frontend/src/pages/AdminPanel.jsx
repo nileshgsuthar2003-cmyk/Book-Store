@@ -557,6 +557,38 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     }
   };
 
+  // Customer Reviews Management State
+  const [adminReviews, setAdminReviews] = useState([]);
+  const [loadingReviewsAdmin, setLoadingReviewsAdmin] = useState(false);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewVisibilityFilter, setReviewVisibilityFilter] = useState("all"); // 'all' | 'visible' | 'hidden'
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [reviewFormData, setReviewFormData] = useState({
+    name: "",
+    tagline: "Verified Reader",
+    review_text: "",
+    rating: 5,
+    avatar_text: "",
+    is_visible: true,
+    display_order: 0
+  });
+  const [savingReview, setSavingReview] = useState(false);
+
+  const fetchAdminReviews = useCallback(async () => {
+    setLoadingReviewsAdmin(true);
+    try {
+      const res = await api.getAdminReviews();
+      if (res && res.reviews) {
+        setAdminReviews(res.reviews);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch admin reviews:", err);
+    } finally {
+      setLoadingReviewsAdmin(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === "policies") {
       fetchPolicy(activePolicySlug);
@@ -691,38 +723,6 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     is_visible: true,
     is_bestseller: false
   });
-
-  // Customer Reviews Management State
-  const [adminReviews, setAdminReviews] = useState([]);
-  const [loadingReviewsAdmin, setLoadingReviewsAdmin] = useState(false);
-  const [reviewSearch, setReviewSearch] = useState("");
-  const [reviewVisibilityFilter, setReviewVisibilityFilter] = useState("all"); // 'all' | 'visible' | 'hidden'
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [editingReview, setEditingReview] = useState(null);
-  const [reviewFormData, setReviewFormData] = useState({
-    name: "",
-    tagline: "Verified Reader",
-    review_text: "",
-    rating: 5,
-    avatar_text: "",
-    is_visible: true,
-    display_order: 0
-  });
-  const [savingReview, setSavingReview] = useState(false);
-
-  const fetchAdminReviews = useCallback(async () => {
-    setLoadingReviewsAdmin(true);
-    try {
-      const res = await api.getAdminReviews();
-      if (res && res.reviews) {
-        setAdminReviews(res.reviews);
-      }
-    } catch (err) {
-      console.warn("Failed to fetch admin reviews:", err);
-    } finally {
-      setLoadingReviewsAdmin(false);
-    }
-  }, []);
 
   const handleOpenAddReview = () => {
     setEditingReview(null);
