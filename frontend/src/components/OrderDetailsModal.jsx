@@ -16,7 +16,8 @@ import {
   Truck,
   Check,
   AlertTriangle,
-  Receipt
+  Receipt,
+  BookOpen
 } from "lucide-react";
 
 export const OrderDetailsModal = ({
@@ -85,8 +86,16 @@ export const OrderDetailsModal = ({
         <div className="invoice-print-header only-print">
           <div className="invoice-print-header-top">
             <div className="invoice-print-brand">
-              <h2>📖 BookNest Bookstore</h2>
-              <p>Official Order Receipt & Tax Invoice</p>
+              <div className="brand invoice-brand">
+                <span className="brand-mark" aria-hidden="true">
+                  <BookOpen size={22} strokeWidth={2.4} />
+                </span>
+                <span className="brand-text">
+                  <span className="brand-title">book<span className="brand-accent">nest</span></span>
+                  <small>FIND YOUR NEXT CHAPTER</small>
+                </span>
+              </div>
+              <p className="invoice-doc-subtitle">Official Order Receipt & Tax Invoice</p>
             </div>
             <div className="invoice-print-meta">
               <div><strong>Invoice / Order #:</strong> #{order.order_code}</div>
@@ -99,9 +108,9 @@ export const OrderDetailsModal = ({
         {/* Modal Web Header */}
         <div className="order-modal-header no-print">
           <div className="order-modal-title-wrap">
-            <div className="order-receipt-icon-badge">
-              <Receipt size={22} />
-            </div>
+            <span className="brand-mark modal-brand-mark" aria-hidden="true">
+              <BookOpen size={20} strokeWidth={2.4} />
+            </span>
             <div>
               <div className="order-code-row">
                 <h2>Order #{order.order_code}</h2>
