@@ -11,7 +11,9 @@ import {
   ArrowLeft,
   RotateCcw,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 export const AuthModal = () => {
@@ -31,6 +33,7 @@ export const AuthModal = () => {
     email: "",
     password: ""
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   // 'form' = filling name, email, password; 'otp' = verifying 6-digit email code
   const [registerStep, setRegisterStep] = useState("form");
@@ -274,12 +277,21 @@ export const AuthModal = () => {
                 <input
                   id="authPassword"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleChange}
                 />
+                <button
+                  type="button"
+                  className="pwd-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
@@ -333,12 +345,21 @@ export const AuthModal = () => {
                 <input
                   id="authPassword"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleChange}
                 />
+                <button
+                  type="button"
+                  className="pwd-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 

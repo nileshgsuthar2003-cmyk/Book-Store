@@ -3126,33 +3126,72 @@ h1, h2, .serif {
   color: #57534e;
 }
 
+/* Unified Input with icon */
 .input-with-icon {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
+  border: 1px solid #ded7cc;
+  border-radius: var(--radius-md);
+  background: var(--white);
+  padding: 0 14px;
+  transition: var(--transition);
+  box-sizing: border-box;
 }
 
+.input-with-icon:focus-within {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(23, 37, 84, 0.08);
+}
+
+.input-with-icon.disabled {
+  background: #f5f2eb;
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.input-with-icon svg,
 .input-with-icon .field-icon {
-  position: absolute;
-  left: 12px;
-  color: var(--muted);
+  position: static !important;
+  color: #8c8273;
+  flex-shrink: 0;
   pointer-events: none;
 }
 
 .input-with-icon input {
+  flex: 1;
   width: 100%;
-  padding: 11px 12px 11px 38px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--white);
-  font-size: 13px;
-  outline: none;
-  transition: var(--transition);
+  border: none !important;
+  background: transparent !important;
+  padding: 11px 0 !important;
+  font-size: 13.5px;
+  color: var(--navy);
+  outline: none !important;
+  box-shadow: none !important;
+  line-height: normal;
 }
 
-.input-with-icon input:focus {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px rgba(23, 37, 84, 0.08);
+.input-with-icon input::placeholder {
+  color: #a8a29e;
+}
+
+.input-with-icon .pwd-toggle-btn {
+  background: none;
+  border: none;
+  color: #8c8273;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.input-with-icon .pwd-toggle-btn:hover {
+  color: var(--navy);
 }
 
 .role-selector-row {
@@ -4851,13 +4890,20 @@ h1, h2, .serif {
   border-color: #f59e0b;
 }
 
+.admin-input-wrap svg {
+  flex-shrink: 0;
+  position: static !important;
+}
+
 .admin-input-wrap input {
   background: transparent;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
   color: #ffffff;
   font-size: 14px;
   width: 100%;
+  flex: 1;
+  padding: 0 !important;
 }
 
 .admin-login-btn {
@@ -5158,43 +5204,7 @@ h1, h2, .serif {
   border-radius: 20px;
 }
 
-/* Input with icon */
-.input-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid #ded7cc;
-  border-radius: var(--radius-md);
-  background: var(--white);
-  padding: 0 12px;
-  transition: var(--transition);
-}
-
-.input-with-icon:focus-within {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px rgba(23, 37, 84, 0.08);
-}
-
-.input-with-icon.disabled {
-  background: #f5f2eb;
-  opacity: 0.85;
-}
-
-.input-with-icon svg {
-  color: #8c8273;
-  flex-shrink: 0;
-}
-
-.input-with-icon input {
-  width: 100%;
-  border: none !important;
-  background: transparent !important;
-  padding: 11px 0 !important;
-  font-size: 13px;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
+/* Profile / Form Input with icon inherits from unified definition */
 .field-hint {
   display: block;
   font-size: 11px;
