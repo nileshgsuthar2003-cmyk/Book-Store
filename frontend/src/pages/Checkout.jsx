@@ -6,11 +6,7 @@ import { api } from "../services/api";
 import {
   ShieldCheck,
   Lock,
-  MapPin,
-  CheckCircle2,
-  Clock,
   AlertTriangle,
-  BookOpen,
   ArrowRight
 } from "lucide-react";
 
@@ -57,10 +53,10 @@ export const Checkout = () => {
   }, [user]);
 
   const [submitting, setSubmitting] = useState(false);
-  const [processingState, setProcessingState] = useState(null); // null | 'checking_stock' | 'securing' | 'confirmed'
+  const [isProcessing, setIsProcessing] = useState(false);
   const [stockError, setStockError] = useState("");
 
-  if (cartItemCount === 0 && !processingState) {
+  if (cartItemCount === 0 && !isProcessing) {
     return (
       <div className="checkout-page">
         <div className="container page-heading">
@@ -113,7 +109,7 @@ export const Checkout = () => {
     }
 
     setSubmitting(true);
-    setProcessingState("checking_stock");
+    setIsProcessing(true);
 
     try {
       // 2. Real-time server stock verification against MySQL
@@ -125,26 +121,20 @@ export const Checkout = () => {
         const errorMsg = stockRes.error || "One or more books in your bag are out of stock.";
         setStockError(errorMsg);
         showToast(errorMsg, "error");
-        setProcessingState(null);
+        setIsProcessing(false);
         setSubmitting(false);
         return;
       }
 
-      // 3. Smooth transition delay (~800ms) for realistic verification
-      await new Promise((res) => setTimeout(res, 800));
-      setProcessingState("securing");
+      // 3. Short delay before navigating to order confirmation
+      await new Promise((res) => setTimeout(res, 1200));
 
-      // 4. Place order in backend (~800ms)
-      await new Promise((res) => setTimeout(res, 800));
+      // 4. Place order in backend
       await placeOrder(formData, { skipNavigate: true });
-
-      // 5. Confirmed success display (~700ms)
-      setProcessingState("confirmed");
-      await new Promise((res) => setTimeout(res, 700));
 
       navigate("/order-confirmation");
     } catch (err) {
-      setProcessingState(null);
+      setIsProcessing(false);
       setSubmitting(false);
       setStockError(err.message || "Unable to place order. Please try again.");
     }
@@ -391,51 +381,13 @@ export const Checkout = () => {
         </form>
       </div>
 
-      {/* Real-time Stock & Order Confirmation Processing Modal */}
-      {processingState && (
+      {/* Simple Loading Modal */}
+      {isProcessing && (
         <div className="modal-backdrop order-processing-backdrop" role="dialog" aria-modal="true">
-          <div className="order-processing-card" onClick={(e) => e.stopPropagation()}>
-            <div className="processing-glow-ring">
-              {processingState === "confirmed" ? (
-                <div className="processing-icon-wrap success">
-                  <CheckCircle2 size={42} className="check-success-icon" />
-                </div>
-              ) : (
-                <div className="processing-icon-wrap active">
-                  <BookOpen size={32} className="processing-book-icon" />
-                  <div className="processing-spinner" />
-                </div>
-              )}
-            </div>
-
-            <h3 className="processing-title">
-              {processingState === "checking_stock" && "Verifying Inventory & Stock..."}
-              {processingState === "securing" && "Securing Books & Preparing Order..."}
-              {processingState === "confirmed" && "Order Confirmed!"}
-            </h3>
-
-            <p className="processing-subtitle">
-              {processingState === "checking_stock" && "Checking real-time shelf stock for your selected reads"}
-              {processingState === "securing" && "Locking your reserved titles and generating invoice..."}
-              {processingState === "confirmed" && "Redirecting to your order receipt..."}
-            </p>
-
-            <div className="processing-stepper">
-              <div className={`proc-step ${processingState === "checking_stock" ? "active" : "done"}`}>
-                <span className="proc-dot" />
-                <span>1. Real-time Inventory Check</span>
-              </div>
-              <div className={`proc-step ${processingState === "securing" ? "active" : processingState === "confirmed" ? "done" : "pending"}`}>
-                <span className="proc-dot" />
-                <span>2. Securing Reserved Copies</span>
-              </div>
-              <div className={`proc-step ${processingState === "confirmed" ? "done active" : "pending"}`}>
-                <span className="proc-dot" />
-                <span>3. Order Confirmed</span>
-              </div>
-            </div>
-
-            <span className="processing-foot-hint">Please do not refresh or close your browser</span>
+          <div className="order-processing-card loading-card" onClick={(e) => e.stopPropagation()}>
+            <div className="order-loading-spinner" />
+            <h3 className="processing-title">Loading…</h3>
+            <p className="processing-subtitle">Placing your order, please wait…</p>
           </div>
         </div>
       )}
