@@ -562,3 +562,62 @@ def delete_category(category_id):
         return jsonify({"error": f"Failed to delete category: {str(e)}"}), 500
     finally:
         conn.close()
+
+@admin_bp.route("/support", methods=["GET"])
+@admin_required
+def admin_get_support():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_support WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "heading": "Support & Care",
+                "link_text": "Your Book Bag",
+                "link_url": "/cart",
+                "email": "hello@booknest.example",
+                "hours": "Mon – Sat: 9am – 7pm IST",
+                "promo_tag": "Use code BOOK10",
+                "phone": "+91 (800) 266-5637"
+            }
+
+        return jsonify({"support": row})
+    finally:
+        conn.close()
+
+@admin_bp.route("/support", methods=["PUT"])
+@admin_required
+def admin_update_support():
+    data = request.get_json() or {}
+    heading = (data.get("heading") or "Support & Care").strip()
+    link_text = (data.get("link_text") or "Your Book Bag").strip()
+    link_url = (data.get("link_url") or "/cart").strip()
+    email = (data.get("email") or "hello@booknest.example").strip()
+    hours = (data.get("hours") or "Mon – Sat: 9am – 7pm IST").strip()
+    promo_tag = (data.get("promo_tag") or "Use code BOOK10").strip()
+    phone = (data.get("phone") or "+91 (800) 266-5637").strip()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO store_support (id, heading, link_text, link_url, email, hours, promo_tag, phone)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    heading = VALUES(heading),
+                    link_text = VALUES(link_text),
+                    link_url = VALUES(link_url),
+                    email = VALUES(email),
+                    hours = VALUES(hours),
+                    promo_tag = VALUES(promo_tag),
+                    phone = VALUES(phone);
+            """, (heading, link_text, link_url, email, hours, promo_tag, phone))
+        conn.commit()
+        return jsonify({"success": True, "message": "Support & Care details updated successfully in MySQL!"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update support details: {str(e)}"}), 500
+    finally:
+        conn.close()

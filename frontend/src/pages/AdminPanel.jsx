@@ -39,7 +39,8 @@ import {
   FolderTree,
   Layers,
   LayoutTemplate,
-  ArrowRight
+  ArrowRight,
+  Headphones
 } from "lucide-react";
 import { OrderDetailsModal } from "../components/OrderDetailsModal";
 
@@ -247,12 +248,28 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     refreshCategories,
     hero,
     setHero,
-    refreshHero
+    refreshHero,
+    supportInfo,
+    setSupportInfo,
+    refreshSupport
   } = useShop();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  // Support & Care State
+  const [supportFormData, setSupportFormData] = useState({
+    heading: "Support & Care",
+    link_text: "Your Book Bag",
+    link_url: "/cart",
+    email: "hello@booknest.example",
+    hours: "Mon – Sat: 9am – 7pm IST",
+    promo_tag: "Use code BOOK10",
+    phone: "+91 (800) 266-5637"
+  });
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [savingSupport, setSavingSupport] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -501,11 +518,42 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "hero" || sub === "banner-hero") return "hero";
     if (sub === "policies" || sub === "legal" || sub === "terms" || sub === "privacy") return "policies";
     if (sub === "categories" || sub === "category" || sub === "shelves") return "categories";
+    if (sub === "support" || sub === "care" || sub === "footer") return "support";
     if (sub === "overview" || sub === "dashboard") return "overview";
     return "overview";
   };
 
   const activeTab = getActiveTab();
+
+  const fetchSupportDetails = useCallback(async () => {
+    setLoadingSupport(true);
+    try {
+      const res = await api.getAdminSupport();
+      if (res && res.support) {
+        setSupportFormData(res.support);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch admin support:", err);
+    } finally {
+      setLoadingSupport(false);
+    }
+  }, []);
+
+  const handleSaveSupport = async (e) => {
+    e.preventDefault();
+    setSavingSupport(true);
+    try {
+      const res = await api.updateAdminSupport(supportFormData);
+      if (res && res.success) {
+        showToast("Support & Care details updated successfully in MySQL!", "success");
+        if (refreshSupport) await refreshSupport();
+      }
+    } catch (err) {
+      showToast(err.message || "Failed to update support details", "error");
+    } finally {
+      setSavingSupport(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === "policies") {
@@ -517,7 +565,10 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (activeTab === "hero" && refreshHero) {
       refreshHero();
     }
-  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories, refreshHero]);
+    if (activeTab === "support") {
+      fetchSupportDetails();
+    }
+  }, [activeTab, activePolicySlug, fetchPolicy, refreshCategories, refreshHero, fetchSupportDetails]);
 
   const handleTabChange = (tab) => {
     if (tab === "overview") {
@@ -1087,6 +1138,14 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             <span>Terms & Privacy</span>
           </button>
 
+          <button
+            className={`admin-sidebar-link ${activeTab === "support" ? "active" : ""}`}
+            onClick={() => handleTabChange("support")}
+          >
+            <Headphones size={18} />
+            <span>Support & Care</span>
+          </button>
+
           <a
             href="/"
             className="admin-sidebar-link store-switch"
@@ -1141,6 +1200,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 {activeTab === "announcement" && "Store Announcement Banner"}
                 {activeTab === "hero" && "Homepage Hero Section"}
                 {activeTab === "policies" && "Legal Policies (Terms & Privacy)"}
+                {activeTab === "support" && "Support & Care / Contact Information"}
               </strong>
             </div>
           </div>
@@ -2624,6 +2684,193 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                   >
                     <CheckCircle size={16} />
                     <span>{savingHero ? "Saving Hero Banner…" : "Save Hero Banner Changes"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SUPPORT & CARE (FOOTER / CONTACT INFO) MANAGEMENT
+            ========================================================================= */}
+        {activeTab === "support" && (
+          <div className="admin-content-section support-management-section">
+            <div className="policy-section-header">
+              <div>
+                <h2>Support & Care / Footer Contact Details</h2>
+                <p>
+                  Manage the customer support email, phone helpline, working hours, and quick links displayed across the footer and policy pages.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSupport} className="support-editor-layout">
+              <div className="support-editor-grid">
+                {/* Left: Input Form Cards */}
+                <div className="support-form-col">
+                  {/* Card 1: Section Title & Navigation Link */}
+                  <div className="hero-card-box">
+                    <div className="hero-card-header">
+                      <h3>Column Heading & Navigation Link</h3>
+                      <p>Header title and quick customer link in the footer</p>
+                    </div>
+                    <div className="hero-card-body">
+                      <div className="field-grid-2">
+                        <div className="field">
+                          <label>Section Heading *</label>
+                          <input
+                            type="text"
+                            required
+                            value={supportFormData.heading}
+                            onChange={(e) => setSupportFormData({ ...supportFormData, heading: e.target.value })}
+                            placeholder="e.g. Support & Care"
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Quick Link Label *</label>
+                          <input
+                            type="text"
+                            required
+                            value={supportFormData.link_text}
+                            onChange={(e) => setSupportFormData({ ...supportFormData, link_text: e.target.value })}
+                            placeholder="e.g. Your Book Bag"
+                          />
+                        </div>
+                      </div>
+                      <div className="field">
+                        <label>Quick Link URL / Destination *</label>
+                        <input
+                          type="text"
+                          required
+                          value={supportFormData.link_url}
+                          onChange={(e) => setSupportFormData({ ...supportFormData, link_url: e.target.value })}
+                          placeholder="e.g. /cart"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Contact Channels & Operational Hours */}
+                  <div className="hero-card-box">
+                    <div className="hero-card-header">
+                      <h3>Contact Info & Working Hours</h3>
+                      <p>Direct communication channels displayed to shoppers</p>
+                    </div>
+                    <div className="hero-card-body">
+                      <div className="field-grid-2">
+                        <div className="field">
+                          <label>Support Email Address *</label>
+                          <input
+                            type="email"
+                            required
+                            value={supportFormData.email}
+                            onChange={(e) => setSupportFormData({ ...supportFormData, email: e.target.value })}
+                            placeholder="e.g. hello@booknest.example"
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Helpline / Telephone</label>
+                          <input
+                            type="text"
+                            value={supportFormData.phone}
+                            onChange={(e) => setSupportFormData({ ...supportFormData, phone: e.target.value })}
+                            placeholder="e.g. +91 (800) 266-5637"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="field">
+                        <label>Operational Hours & Days *</label>
+                        <input
+                          type="text"
+                          required
+                          value={supportFormData.hours}
+                          onChange={(e) => setSupportFormData({ ...supportFormData, hours: e.target.value })}
+                          placeholder="e.g. Mon – Sat: 9am – 7pm IST"
+                        />
+                      </div>
+
+                      <div className="field">
+                        <label>Promotional Badge / Offer Tag</label>
+                        <input
+                          type="text"
+                          value={supportFormData.promo_tag}
+                          onChange={(e) => setSupportFormData({ ...supportFormData, promo_tag: e.target.value })}
+                          placeholder="e.g. Use code BOOK10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Live Preview Box */}
+                <div className="support-preview-col">
+                  <div className="support-preview-card">
+                    <div className="support-preview-header">
+                      <span className="live-preview-badge">✦ Live Footer Preview</span>
+                      <small>Matches customer view exactly</small>
+                    </div>
+
+                    <div className="support-preview-display">
+                      <div className="footer-col-preview">
+                        <h3>{supportFormData.heading || "SUPPORT & CARE"}</h3>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="preview-link">
+                          {supportFormData.link_text || "Your Book Bag"}
+                        </a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="preview-email">
+                          {supportFormData.email || "hello@booknest.example"}
+                        </a>
+                        <span className="preview-hours">
+                          {supportFormData.hours || "Mon – Sat: 9am – 7pm IST"}
+                        </span>
+                        {supportFormData.promo_tag && (
+                          <span className="footer-promo-pill">
+                            {supportFormData.promo_tag}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="support-preview-tip">
+                      <small>
+                        💡 Any updates saved here are instantly written to MySQL table <code>store_support</code> and reflected across the site footer and customer support links without requiring a server reboot.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="policy-action-bar">
+                <button
+                  type="button"
+                  className="btn-reset-policy"
+                  onClick={() =>
+                    setSupportFormData({
+                      heading: "Support & Care",
+                      link_text: "Your Book Bag",
+                      link_url: "/cart",
+                      email: "hello@booknest.example",
+                      hours: "Mon – Sat: 9am – 7pm IST",
+                      promo_tag: "Use code BOOK10",
+                      phone: "+91 (800) 266-5637"
+                    })
+                  }
+                  disabled={savingSupport}
+                >
+                  <RotateCcw size={15} />
+                  <span>Reset to Defaults</span>
+                </button>
+
+                <div className="actions-right">
+                  <button
+                    type="submit"
+                    className="btn-save-announcement"
+                    disabled={savingSupport}
+                  >
+                    <CheckCircle size={16} />
+                    <span>{savingSupport ? "Saving Settings…" : "Save Support & Care Settings"}</span>
                   </button>
                 </div>
               </div>

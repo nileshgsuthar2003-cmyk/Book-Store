@@ -40,6 +40,12 @@ def create_order():
                 if not book_row:
                     return jsonify({"error": f"Book with id {book_id} not found."}), 404
 
+                # Real-time stock verification
+                if not bool(book_row.get("in_stock", 1)):
+                    return jsonify({
+                        "error": f"Sorry, '{book_row['title']}' is currently out of stock. Please remove it from your book bag to proceed."
+                    }), 400
+
                 price = float(book_row["price"])
                 subtotal += price * qty
 
@@ -281,5 +287,38 @@ def update_order_status(order_id):
             cur.execute("UPDATE orders SET status = %s WHERE id = %s;", (status, order_id))
         conn.commit()
         return jsonify({"success": True, "message": f"Order #{order_id} status updated to {status}."})
+    finally:
+        conn.close()
+
+@orders_bp.route("/check-stock", methods=["POST"])
+def check_stock():
+    data = request.get_json() or {}
+    items = data.get("items") or []
+    if not items:
+        return jsonify({"valid": True, "out_of_stock": []})
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            out_of_stock = []
+            for it in items:
+                b_id = it.get("id") or it.get("book_id")
+                cur.execute("SELECT id, title, in_stock FROM books WHERE id = %s;", (b_id,))
+                row = cur.fetchone()
+                if not row or not bool(row.get("in_stock", 1)):
+                    out_of_stock.append({
+                        "id": b_id,
+                        "title": row["title"] if row else f"Book #{b_id}"
+                    })
+
+            if out_of_stock:
+                titles = ", ".join([f"'{b['title']}'" for b in out_of_stock])
+                return jsonify({
+                    "valid": False,
+                    "out_of_stock": out_of_stock,
+                    "error": f"Sorry, {titles} {'is' if len(out_of_stock) == 1 else 'are'} currently out of stock. Please remove from your bag to continue."
+                }), 400
+
+            return jsonify({"valid": True, "out_of_stock": []})
     finally:
         conn.close()

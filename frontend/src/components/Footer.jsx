@@ -3,7 +3,17 @@ import { useShop } from "../context/ShopContext";
 import { BookOpen } from "lucide-react";
 
 export const Footer = () => {
-  const { navigate, setSelectedCategory } = useShop();
+  const { navigate, setSelectedCategory, supportInfo } = useShop();
+
+  const support = supportInfo || {
+    heading: "Support & Care",
+    link_text: "Your Book Bag",
+    link_url: "/cart",
+    email: "hello@booknest.example",
+    hours: "Mon – Sat: 9am – 7pm IST",
+    promo_tag: "Use code BOOK10",
+    phone: "+91 (800) 266-5637"
+  };
 
   const handleLink = (e, path, cat = "") => {
     e.preventDefault();
@@ -69,15 +79,23 @@ export const Footer = () => {
             </a>
           </div>
 
-          {/* Col 3 */}
+          {/* Col 3: Support & Care (Configurable via Admin Panel) */}
           <div className="footer-col">
-            <h3>Support & Care</h3>
-            <a href="/cart" onClick={(e) => handleLink(e, "/cart")}>
-              Your Book Bag
-            </a>
-            <a href="mailto:hello@booknest.example">hello@booknest.example</a>
-            <span className="footer-support-hours">Mon - Sat: 9am - 7pm IST</span>
-            <span className="footer-promo-pill">Use code <strong>BOOK10</strong></span>
+            <h3>{support.heading || "Support & Care"}</h3>
+            {support.link_text && (
+              <a href={support.link_url || "/cart"} onClick={(e) => handleLink(e, support.link_url || "/cart")}>
+                {support.link_text}
+              </a>
+            )}
+            {support.email && (
+              <a href={`mailto:${support.email}`}>{support.email}</a>
+            )}
+            {support.hours && (
+              <span className="footer-support-hours">{support.hours}</span>
+            )}
+            {support.promo_tag && (
+              <span className="footer-promo-pill">{support.promo_tag}</span>
+            )}
           </div>
         </div>
 

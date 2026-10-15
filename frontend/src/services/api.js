@@ -147,6 +147,12 @@ export const api = {
     }),
 
   // Orders
+  checkStock: (items) =>
+    request("/orders/check-stock", {
+      method: "POST",
+      body: JSON.stringify({ items })
+    }),
+
   createOrder: ({ customer, items, coupon }) =>
     request("/orders", {
       method: "POST",
@@ -217,6 +223,15 @@ export const api = {
   getHero: () => request("/hero"),
   updateHero: (data) =>
     request("/admin/hero", {
+      method: "PUT",
+      body: JSON.stringify(data)
+    }),
+
+  // Store Support & Care (Footer & Contact)
+  getSupport: () => request("/support"),
+  getAdminSupport: () => request("/admin/support"),
+  updateAdminSupport: (data) =>
+    request("/admin/support", {
       method: "PUT",
       body: JSON.stringify(data)
     })

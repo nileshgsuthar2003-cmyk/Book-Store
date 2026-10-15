@@ -384,6 +384,26 @@ def init_db():
             VALUES (%s, %s, %s, %s, %s);
         """, ("privacy", "Privacy Policy", "How we protect, respect, and handle your personal reading data.", "October 2026", default_privacy_content))
 
+        # Store Support & Care Table (Footer & Contact Details)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS store_support (
+            id INT PRIMARY KEY DEFAULT 1,
+            heading VARCHAR(100) DEFAULT 'Support & Care',
+            link_text VARCHAR(100) DEFAULT 'Your Book Bag',
+            link_url VARCHAR(255) DEFAULT '/cart',
+            email VARCHAR(191) DEFAULT 'hello@booknest.example',
+            hours VARCHAR(150) DEFAULT 'Mon – Sat: 9am – 7pm IST',
+            promo_tag VARCHAR(100) DEFAULT 'Use code BOOK10',
+            phone VARCHAR(50) DEFAULT '+91 (800) 266-5637',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        cur.execute("""
+        INSERT IGNORE INTO store_support (id, heading, link_text, link_url, email, hours, promo_tag, phone)
+        VALUES (1, 'Support & Care', 'Your Book Bag', '/cart', 'hello@booknest.example', 'Mon – Sat: 9am – 7pm IST', 'Use code BOOK10', '+91 (800) 266-5637');
+        """)
+
     conn.commit()
     conn.close()
     print("MySQL database and tables successfully initialized.")

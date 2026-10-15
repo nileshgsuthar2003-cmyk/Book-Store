@@ -2,10 +2,31 @@ import React, { useState, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/useAuth";
 import { formatPrice } from "../data/booksData";
-import { ShieldCheck, Lock, MapPin } from "lucide-react";
+import { api } from "../services/api";
+import {
+  ShieldCheck,
+  Lock,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  BookOpen,
+  ArrowRight
+} from "lucide-react";
 
 export const Checkout = () => {
-  const { cartItemCount, cartSubtotal, shippingFee, discountAmount, cartTotal, placeOrder, navigate } = useShop();
+  const {
+    cart,
+    books,
+    cartItemCount,
+    cartSubtotal,
+    shippingFee,
+    discountAmount,
+    cartTotal,
+    placeOrder,
+    navigate,
+    showToast
+  } = useShop();
   const { user, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -36,8 +57,10 @@ export const Checkout = () => {
   }, [user]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [processingState, setProcessingState] = useState(null); // null | 'checking_stock' | 'securing' | 'confirmed'
+  const [stockError, setStockError] = useState("");
 
-  if (cartItemCount === 0) {
+  if (cartItemCount === 0 && !processingState) {
     return (
       <div className="checkout-page">
         <div className="container page-heading">
@@ -69,11 +92,61 @@ export const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setStockError("");
+
+    // 1. Client-side quick stock check
+    const itemsPayload = Object.entries(cart).map(([id, qty]) => ({
+      id: Number(id),
+      qty
+    }));
+
+    const outOfStockClient = itemsPayload
+      .map((it) => books.find((b) => b.id === it.id))
+      .filter((b) => b && (b.in_stock === false || b.stock === false));
+
+    if (outOfStockClient.length > 0) {
+      const names = outOfStockClient.map((b) => `'${b.title}'`).join(", ");
+      const msg = `Sorry, ${names} is currently out of stock. Please remove it from your bag to proceed.`;
+      setStockError(msg);
+      showToast(msg, "error");
+      return;
+    }
+
     setSubmitting(true);
+    setProcessingState("checking_stock");
+
     try {
-      await placeOrder(formData);
-    } finally {
+      // 2. Real-time server stock verification against MySQL
+      const stockRes = await api.checkStock(itemsPayload).catch((err) => {
+        throw new Error(err.message || "Failed to verify real-time stock.");
+      });
+
+      if (!stockRes.valid) {
+        const errorMsg = stockRes.error || "One or more books in your bag are out of stock.";
+        setStockError(errorMsg);
+        showToast(errorMsg, "error");
+        setProcessingState(null);
+        setSubmitting(false);
+        return;
+      }
+
+      // 3. Smooth transition delay (~800ms) for realistic verification
+      await new Promise((res) => setTimeout(res, 800));
+      setProcessingState("securing");
+
+      // 4. Place order in backend (~800ms)
+      await new Promise((res) => setTimeout(res, 800));
+      await placeOrder(formData, { skipNavigate: true });
+
+      // 5. Confirmed success display (~700ms)
+      setProcessingState("confirmed");
+      await new Promise((res) => setTimeout(res, 700));
+
+      navigate("/order-confirmation");
+    } catch (err) {
+      setProcessingState(null);
       setSubmitting(false);
+      setStockError(err.message || "Unable to place order. Please try again.");
     }
   };
 
@@ -92,6 +165,23 @@ export const Checkout = () => {
       </div>
 
       <div className="container">
+        {stockError && (
+          <div className="checkout-stock-alert">
+            <AlertTriangle size={20} className="stock-alert-icon" />
+            <div className="stock-alert-body">
+              <strong>Stock Notice</strong>
+              <p>{stockError}</p>
+            </div>
+            <button
+              type="button"
+              className="btn-stock-alert-action"
+              onClick={() => navigate("/cart")}
+            >
+              Modify Bag <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
+
         <form id="checkoutForm" className="checkout-layout" onSubmit={handleSubmit}>
           {/* Main Form Inputs */}
           <div className="checkout-main">
@@ -300,6 +390,55 @@ export const Checkout = () => {
           </aside>
         </form>
       </div>
+
+      {/* Real-time Stock & Order Confirmation Processing Modal */}
+      {processingState && (
+        <div className="modal-backdrop order-processing-backdrop" role="dialog" aria-modal="true">
+          <div className="order-processing-card" onClick={(e) => e.stopPropagation()}>
+            <div className="processing-glow-ring">
+              {processingState === "confirmed" ? (
+                <div className="processing-icon-wrap success">
+                  <CheckCircle2 size={42} className="check-success-icon" />
+                </div>
+              ) : (
+                <div className="processing-icon-wrap active">
+                  <BookOpen size={32} className="processing-book-icon" />
+                  <div className="processing-spinner" />
+                </div>
+              )}
+            </div>
+
+            <h3 className="processing-title">
+              {processingState === "checking_stock" && "Verifying Inventory & Stock..."}
+              {processingState === "securing" && "Securing Books & Preparing Order..."}
+              {processingState === "confirmed" && "Order Confirmed!"}
+            </h3>
+
+            <p className="processing-subtitle">
+              {processingState === "checking_stock" && "Checking real-time shelf stock for your selected reads"}
+              {processingState === "securing" && "Locking your reserved titles and generating invoice..."}
+              {processingState === "confirmed" && "Redirecting to your order receipt..."}
+            </p>
+
+            <div className="processing-stepper">
+              <div className={`proc-step ${processingState === "checking_stock" ? "active" : "done"}`}>
+                <span className="proc-dot" />
+                <span>1. Real-time Inventory Check</span>
+              </div>
+              <div className={`proc-step ${processingState === "securing" ? "active" : processingState === "confirmed" ? "done" : "pending"}`}>
+                <span className="proc-dot" />
+                <span>2. Securing Reserved Copies</span>
+              </div>
+              <div className={`proc-step ${processingState === "confirmed" ? "done active" : "pending"}`}>
+                <span className="proc-dot" />
+                <span>3. Order Confirmed</span>
+              </div>
+            </div>
+
+            <span className="processing-foot-hint">Please do not refresh or close your browser</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -312,3 +312,36 @@ def get_policy_by_slug(slug):
         })
     finally:
         conn.close()
+
+@general_bp.route("/support", methods=["GET"])
+def get_support():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_support WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "heading": "Support & Care",
+                "link_text": "Your Book Bag",
+                "link_url": "/cart",
+                "email": "hello@booknest.example",
+                "hours": "Mon – Sat: 9am – 7pm IST",
+                "promo_tag": "Use code BOOK10",
+                "phone": "+91 (800) 266-5637"
+            }
+
+        return jsonify({
+            "support": {
+                "heading": row.get("heading") or "Support & Care",
+                "link_text": row.get("link_text") or "Your Book Bag",
+                "link_url": row.get("link_url") or "/cart",
+                "email": row.get("email") or "hello@booknest.example",
+                "hours": row.get("hours") or "Mon – Sat: 9am – 7pm IST",
+                "promo_tag": row.get("promo_tag") or "Use code BOOK10",
+                "phone": row.get("phone") or "+91 (800) 266-5637"
+            }
+        })
+    finally:
+        conn.close()

@@ -59,6 +59,16 @@ const DEFAULT_ANNOUNCEMENT = {
   link_url: "/shop"
 };
 
+const DEFAULT_SUPPORT = {
+  heading: "Support & Care",
+  link_text: "Your Book Bag",
+  link_url: "/cart",
+  email: "hello@booknest.example",
+  hours: "Mon – Sat: 9am – 7pm IST",
+  promo_tag: "Use code BOOK10",
+  phone: "+91 (800) 266-5637"
+};
+
 export const ShopProvider = ({ children }) => {
   const [books, setBooks] = useState(FALLBACK_BOOKS);
   const [loadingBooks, setLoadingBooks] = useState(true);
@@ -76,6 +86,10 @@ export const ShopProvider = ({ children }) => {
 
   const [announcement, setAnnouncement] = useState(() =>
     loadFromStorage("bn-announcement", DEFAULT_ANNOUNCEMENT)
+  );
+
+  const [supportInfo, setSupportInfo] = useState(() =>
+    loadFromStorage("bn-support", DEFAULT_SUPPORT)
   );
 
   const [cart, setCart] = useState(() => loadFromStorage("bn-cart", {}));
@@ -115,18 +129,23 @@ export const ShopProvider = ({ children }) => {
     saveToStorage("bn-hero", hero);
   }, [hero]);
 
+  useEffect(() => {
+    saveToStorage("bn-support", supportInfo);
+  }, [supportInfo]);
+
   // Load books & announcement from Flask Backend on mount
   useEffect(() => {
     let isMounted = true;
 
     async function loadInitialData() {
       try {
-        const [healthRes, booksRes, announcementRes, categoriesRes, heroRes] = await Promise.all([
+        const [healthRes, booksRes, announcementRes, categoriesRes, heroRes, supportRes] = await Promise.all([
           api.checkHealth().catch(() => null),
           api.getBooks().catch(() => null),
           api.getAnnouncement().catch(() => null),
           api.getCategories().catch(() => null),
-          api.getHero().catch(() => null)
+          api.getHero().catch(() => null),
+          api.getSupport().catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -154,6 +173,11 @@ export const ShopProvider = ({ children }) => {
         if (heroRes && heroRes.hero) {
           setHero(heroRes.hero);
           saveToStorage("bn-hero", heroRes.hero);
+        }
+
+        if (supportRes && supportRes.support) {
+          setSupportInfo(supportRes.support);
+          saveToStorage("bn-support", supportRes.support);
         }
       } catch (err) {
         console.warn("Backend connection notice; using local fallback dataset:", err);
@@ -251,6 +275,19 @@ export const ShopProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn("Failed to refresh hero:", err);
+    }
+  }, []);
+
+  const refreshSupport = useCallback(async () => {
+    try {
+      const res = await api.getSupport();
+      if (res && res.support) {
+        setSupportInfo(res.support);
+        saveToStorage("bn-support", res.support);
+        return res.support;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh support info:", err);
     }
   }, []);
 
@@ -406,12 +443,25 @@ export const ShopProvider = ({ children }) => {
   }, [showToast]);
 
   // Dynamic Order creation with Flask backend
-  const placeOrder = useCallback(async (customerData) => {
+  const placeOrder = useCallback(async (customerData, options = {}) => {
+    const { skipNavigate = false } = options;
     const shipping = !cartSubtotal || cartSubtotal >= 799 ? 0 : 49;
     const itemsPayload = Object.entries(cart).map(([id, qty]) => ({
       id: Number(id),
       qty
     }));
+
+    // Stock check against local catalog
+    const outOfStockItems = itemsPayload
+      .map((it) => books.find((b) => b.id === it.id))
+      .filter((b) => b && (b.in_stock === false || b.stock === false));
+
+    if (outOfStockItems.length > 0) {
+      const names = outOfStockItems.map((b) => `'${b.title}'`).join(", ");
+      const msg = `Sorry, ${names} ${outOfStockItems.length === 1 ? "is" : "are"} currently out of stock. Please remove from your bag to proceed.`;
+      showToast(msg, "error");
+      throw new Error(msg);
+    }
 
     try {
       // POST to Flask Backend
@@ -428,51 +478,22 @@ export const ShopProvider = ({ children }) => {
         clearCart();
         setCouponCode("");
         setAppliedDiscount(0);
-        navigate("/order-confirmation");
+        if (!skipNavigate) {
+          navigate("/order-confirmation");
+        }
         showToast(`Order #${created.order_code} placed successfully!`, "success");
         return created;
       }
     } catch (err) {
-      console.warn("Backend order creation fallback:", err);
+      if (err.message && (err.message.includes("out of stock") || err.message.includes("required") || err.message.includes("not found"))) {
+        showToast(err.message, "error");
+        throw err;
+      }
+      console.warn("Backend order creation error:", err);
+      showToast(err.message || "Failed to place order. Please try again.", "error");
+      throw err;
     }
-
-    // Fallback local creation if server unreachable
-    const discount = appliedDiscount;
-    const total = Math.max(0, cartSubtotal + shipping - discount);
-    const fallbackOrder = {
-      id: Math.floor(100000 + Math.random() * 900000),
-      order_code: `BN-${Math.floor(100000 + Math.random() * 900000)}`,
-      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-      name: customerData.name,
-      email: customerData.email,
-      phone: customerData.phone,
-      address: `${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}`,
-      paymentMethod: customerData.paymentMethod || "Cash on Delivery",
-      items: Object.entries(cart).map(([id, qty]) => {
-        const book = books.find((b) => b.id === Number(id));
-        return {
-          id: Number(id),
-          title: book?.title,
-          price: book?.price,
-          qty,
-          cover: book?.cover
-        };
-      }),
-      subtotal: cartSubtotal,
-      shipping,
-      discount,
-      total
-    };
-
-    saveToStorage("bn-order", fallbackOrder);
-    setLastOrder(fallbackOrder);
-    clearCart();
-    setCouponCode("");
-    setAppliedDiscount(0);
-    navigate("/order-confirmation");
-    showToast("Order placed successfully!", "success");
-    return fallbackOrder;
-  }, [cart, cartSubtotal, couponCode, appliedDiscount, books, clearCart, navigate, showToast]);
+  }, [cart, cartSubtotal, couponCode, books, clearCart, navigate, showToast]);
 
   // Derived values
   const cartItemCount = useMemo(() => {
@@ -533,7 +554,10 @@ export const ShopProvider = ({ children }) => {
     refreshAnnouncement,
     hero,
     setHero,
-    refreshHero
+    refreshHero,
+    supportInfo,
+    setSupportInfo,
+    refreshSupport
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
