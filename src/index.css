@@ -3105,6 +3105,208 @@ h1, h2, .serif {
   cursor: pointer;
 }
 
+/* Email OTP Verification Modal Elements */
+.field-sub-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  display: block;
+}
+
+.otp-step-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.otp-email-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #f7f3ec;
+  border: 1px solid var(--line-strong);
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  color: var(--navy);
+}
+
+.otp-email-target {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.otp-change-email-btn {
+  background: none;
+  border: none;
+  color: var(--terracotta);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.otp-change-email-btn:hover {
+  background: rgba(194, 65, 12, 0.08);
+  text-decoration: underline;
+}
+
+.otp-digit-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.otp-code-input {
+  width: 100%;
+  max-width: 280px;
+  height: 52px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 12px;
+  padding-left: 18px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--navy);
+  outline: none;
+  transition: var(--transition);
+}
+
+.otp-code-input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 4px rgba(23, 37, 84, 0.1);
+}
+
+.otp-code-input::placeholder {
+  letter-spacing: 10px;
+  color: #c7c2b8;
+  font-weight: 400;
+}
+
+.otp-demo-card {
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #92400e;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.otp-demo-card:hover {
+  background: #fef3c7;
+  border-color: #d97706;
+  transform: translateY(-1px);
+}
+
+.demo-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #b45309;
+}
+
+.otp-demo-card strong {
+  font-size: 15px;
+  letter-spacing: 2px;
+  font-family: monospace;
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #fde68a;
+}
+
+.click-fill-text {
+  font-size: 11px;
+  color: #b45309;
+  text-decoration: underline;
+}
+
+.otp-resend-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 28px;
+}
+
+.timer-wait-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.timer-wait-text strong {
+  color: var(--navy);
+}
+
+.resend-action-btn {
+  background: none;
+  border: none;
+  color: var(--navy);
+  font-size: 12.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.resend-action-btn:hover:not(:disabled) {
+  background: #f0eadf;
+  color: var(--terracotta);
+}
+
+.resend-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.otp-back-link-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.back-step-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.back-step-btn:hover {
+  color: var(--navy);
+  text-decoration: underline;
+}
+
 /* Header User Profile & Role Status */
 .sign-in-btn {
   padding: 8px 14px;

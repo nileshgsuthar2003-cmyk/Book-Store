@@ -180,6 +180,20 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
 
+        # Email OTPs Table (For account creation and email verification)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS email_otps (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(191) NOT NULL,
+            otp_code VARCHAR(10) NOT NULL,
+            purpose VARCHAR(50) DEFAULT 'register',
+            is_used TINYINT(1) DEFAULT 0,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_email_otp (email, otp_code)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
     conn.commit()
     conn.close()
     print("MySQL database and tables successfully initialized.")

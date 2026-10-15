@@ -67,8 +67,12 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.error || "Login failed");
   }, []);
 
-  const register = useCallback(async (name, email, password, role = "user") => {
-    const res = await api.register(name, email, password, role);
+  const sendOtp = useCallback(async ({ email, name, purpose = "register" }) => {
+    return await api.sendOtp({ email, name, purpose });
+  }, []);
+
+  const register = useCallback(async (name, email, password, otp = "") => {
+    const res = await api.register(name, email, password, otp);
     if (res.success && res.token) {
       setToken(res.token);
       setUser(res.user);
@@ -131,6 +135,7 @@ export const AuthProvider = ({ children }) => {
     setAuthModalMode,
     login,
     register,
+    sendOtp,
     logout,
     updateUserProfile
   };

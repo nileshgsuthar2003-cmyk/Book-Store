@@ -41,10 +41,16 @@ export const api = {
       body: JSON.stringify({ email, password })
     }),
 
-  register: (name, email, password, role = "user") =>
+  sendOtp: ({ email, name = "Book Lover", purpose = "register" }) =>
+    request("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, name, purpose })
+    }),
+
+  register: (name, email, password, otp = "") =>
     request("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password, role })
+      body: JSON.stringify({ name, email, password, otp })
     }),
 
   getMe: () => request("/auth/me"),
