@@ -33,7 +33,9 @@ import {
   Sparkles,
   Palette,
   Globe,
-  Check
+  Check,
+  FileText,
+  ShieldCheck
 } from "lucide-react";
 
 const THEME_OPTIONS = [
@@ -112,6 +114,117 @@ const ANNOUNCEMENT_PRESETS = [
     }
   }
 ];
+
+const FALLBACK_TERMS = {
+  slug: "terms",
+  title: "Terms & Conditions",
+  subtitle: "Clear guidelines and mutual commitments for an exceptional reading journey.",
+  last_updated: "October 2026",
+  content: {
+    intro:
+      "Welcome to BookNest. These Terms and Conditions govern your use of our website, services, and the purchase of books from our catalog. By browsing, creating an account, or placing an order, you agree to comply with and be bound by these terms.",
+    sections: [
+      {
+        id: "eligibility",
+        heading: "1. Acceptance of Terms & Eligibility",
+        body: "By accessing BookNest, you represent that you are at least 18 years of age or accessing the site under the supervision of a parent or legal guardian. If you do not agree with any part of these terms, please discontinue using the service immediately."
+      },
+      {
+        id: "accounts",
+        heading: "2. Accounts, Email OTP Verification & Security",
+        body: "To access certain features like order tracking and wishlists, you must register an account. During registration, a 6-digit email OTP is sent to verify your identity. You are responsible for safeguarding your password and account credentials. Notify us immediately of any unauthorized access."
+      },
+      {
+        id: "orders-pricing",
+        heading: "3. Book Orders, Pricing & Catalog Availability",
+        body: "All book orders placed are subject to inventory availability. We strive for 100% price accuracy, but in the rare event of a typographical error, BookNest reserves the right to cancel or rectify orders prior to dispatch. Prices are quoted in Indian Rupees (₹) inclusive of applicable taxes."
+      },
+      {
+        id: "shipping-delivery",
+        heading: "4. Shipping & Delivery Timeline",
+        body: "We offer free standard doorstep delivery on all orders over ₹799. Orders below ₹799 incur a standard shipping fee of ₹49. Most orders are dispatched within 24-48 business hours and delivered within 3-5 business days across India."
+      },
+      {
+        id: "returns-refunds",
+        heading: "5. Cancellations & Easy 7-Day Returns",
+        body: "You may cancel an order before it has been shipped. If you receive a book that is physically damaged, misprinted, or defective, you may initiate a return within 7 calendar days of delivery for a replacement or full refund to the original payment method."
+      },
+      {
+        id: "intellectual-property",
+        heading: "6. Intellectual Property & Copyrights",
+        body: "All book titles, cover illustrations, descriptions, brand graphics, and logos displayed on BookNest are the intellectual property of their respective publishers, authors, or BookNest Inc. Unauthorized reproduction or scraping is prohibited."
+      },
+      {
+        id: "conduct",
+        heading: "7. User Conduct & Reviews",
+        body: "When submitting book reviews or ratings, you agree not to submit unlawful, defamatory, or abusive content. BookNest reserves the right to moderate, edit, or remove reviews that violate community standards."
+      },
+      {
+        id: "liability",
+        heading: "8. Limitation of Liability & Jurisdiction",
+        body: "BookNest shall not be liable for any indirect, incidental, or consequential damages resulting from the use of the platform. These terms are governed in accordance with the laws of India, subject to the jurisdiction of competent courts."
+      },
+      {
+        id: "contact",
+        heading: "9. Contact Information & Support",
+        body: "For queries or concerns regarding these terms, reach our support team at hello@booknest.example or via telephone at +91 (800) 266-5637 (Mon-Sat, 9am - 7pm IST)."
+      }
+    ]
+  }
+};
+
+const FALLBACK_PRIVACY = {
+  slug: "privacy",
+  title: "Privacy Policy",
+  subtitle: "How we protect, respect, and handle your personal reading data.",
+  last_updated: "October 2026",
+  content: {
+    intro:
+      "At BookNest, your privacy is a foundational priority. This Privacy Policy describes how we collect, use, store, and protect your personal information when you browse our bookstore, create an account, or order books.",
+    sections: [
+      {
+        id: "collection",
+        heading: "1. Information We Collect",
+        body: "We collect information you provide directly, such as your full name, email address, contact phone number, delivery address, city, state, and pin code. We also collect transactional details regarding books purchased and saved wishlist titles."
+      },
+      {
+        id: "usage",
+        heading: "2. How We Use Your Information",
+        body: "Your data is used solely to process book orders, verify your account via one-time verification codes (OTPs), coordinate doorstep deliveries, send transactional order invoices, and offer personalized reading recommendations."
+      },
+      {
+        id: "security",
+        heading: "3. Security & Payment Data Protection",
+        body: "We implement industry-standard encryption, SSL/TLS transmission protocols, and strict access controls. BookNest does not store your credit/debit card numbers or CVV codes; all payment processing is securely managed by certified PCI-DSS compliant payment gateways."
+      },
+      {
+        id: "sharing",
+        heading: "4. Information Sharing & Third Parties",
+        body: "We do not sell, rent, or monetize your personal details. We share relevant data only with vetted logistics and delivery partners (e.g. courier services) solely to ensure timely book dispatch and package delivery."
+      },
+      {
+        id: "cookies",
+        heading: "5. Cookies & Local Storage",
+        body: "We use essential cookies and browser local storage to preserve your shopping bag, wishlist, and session authentication tokens between visits for a seamless reading and shopping experience."
+      },
+      {
+        id: "user-rights",
+        heading: "6. Your Data Rights & Choices",
+        body: "You have the right to view, update, or edit your saved profile information and delivery address at any time from your Account Profile page. You may also request deletion of your account and associated history by contacting support."
+      },
+      {
+        id: "updates",
+        heading: "7. Policy Updates & Notifications",
+        body: "We may update this Privacy Policy periodically to reflect changes in our legal obligations or store enhancements. Any significant revisions will be indicated by the 'Last Updated' date at the top of this page."
+      },
+      {
+        id: "privacy-contact",
+        heading: "8. Privacy Inquiries & Data Officer",
+        body: "If you have any questions about this privacy statement or our handling of your data, please contact our Data Protection desk at privacy@booknest.example."
+      }
+    ]
+  }
+};
 
 export const AdminPanel = ({ currentPath = "admin" }) => {
   const { user, isAdmin, login, logout } = useAuth();
@@ -193,7 +306,123 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     showToast("Reset form to default banner. Click 'Save Announcement Changes' to apply.", "info");
   };
 
-  // Synchronize active tab with URL path: /admin, /admin/books, /admin/users, /admin/orders, /admin/announcement
+  // Policy Editor State (Terms & Conditions, Privacy Policy)
+  const [activePolicySlug, setActivePolicySlug] = useState("terms"); // 'terms' | 'privacy'
+  const [policyForm, setPolicyForm] = useState({
+    slug: "terms",
+    title: "Terms & Conditions",
+    subtitle: "Clear guidelines and mutual commitments for an exceptional reading journey.",
+    last_updated: "October 2026",
+    content: {
+      intro: "",
+      sections: []
+    }
+  });
+  const [loadingPolicy, setLoadingPolicy] = useState(false);
+  const [savingPolicy, setSavingPolicy] = useState(false);
+
+  // Load active policy
+  const fetchPolicy = useCallback(async (slugToFetch) => {
+    setLoadingPolicy(true);
+    try {
+      const res = await api.getPolicy(slugToFetch);
+      if (res && res.policy) {
+        const rawContent = res.policy.content || {};
+        const sections = rawContent.sections || rawContent.clauses || [];
+        const intro = rawContent.intro || rawContent.notice || "";
+        setPolicyForm({
+          slug: res.policy.slug,
+          title: res.policy.title || "",
+          subtitle: res.policy.subtitle || "",
+          last_updated: res.policy.last_updated || "October 2026",
+          content: { intro, sections }
+        });
+      }
+    } catch (err) {
+      console.warn("Notice loading policy in admin:", err);
+      const fallback = slugToFetch === "privacy" ? FALLBACK_PRIVACY : FALLBACK_TERMS;
+      setPolicyForm({
+        slug: fallback.slug,
+        title: fallback.title,
+        subtitle: fallback.subtitle,
+        last_updated: fallback.last_updated,
+        content: JSON.parse(JSON.stringify(fallback.content))
+      });
+    } finally {
+      setLoadingPolicy(false);
+    }
+  }, []);
+
+  const handleSwitchPolicyTab = (newSlug) => {
+    setActivePolicySlug(newSlug);
+  };
+
+  const handleSavePolicy = async (e) => {
+    if (e) e.preventDefault();
+    setSavingPolicy(true);
+    try {
+      const res = await api.updatePolicy(activePolicySlug, policyForm);
+      showToast(res.message || `Policy '${policyForm.title}' saved successfully!`, "success");
+    } catch (err) {
+      showToast(err.message || "Failed to save policy.", "warning");
+    } finally {
+      setSavingPolicy(false);
+    }
+  };
+
+  const handleAddClause = () => {
+    const nextIdx = (policyForm.content?.sections?.length || 0) + 1;
+    const newSection = {
+      id: `clause-${Date.now()}`,
+      heading: `${nextIdx}. New Policy Clause`,
+      body: "Describe the terms or privacy clause details here..."
+    };
+    setPolicyForm({
+      ...policyForm,
+      content: {
+        ...policyForm.content,
+        sections: [...(policyForm.content?.sections || []), newSection]
+      }
+    });
+  };
+
+  const handleRemoveClause = (idxToRemove) => {
+    if (!window.confirm("Are you sure you want to delete this clause?")) return;
+    const updated = policyForm.content?.sections?.filter((_, idx) => idx !== idxToRemove) || [];
+    setPolicyForm({
+      ...policyForm,
+      content: {
+        ...policyForm.content,
+        sections: updated
+      }
+    });
+  };
+
+  const handleClauseChange = (idx, field, val) => {
+    const updated = [...(policyForm.content?.sections || [])];
+    updated[idx] = { ...updated[idx], [field]: val };
+    setPolicyForm({
+      ...policyForm,
+      content: {
+        ...policyForm.content,
+        sections: updated
+      }
+    });
+  };
+
+  const handleResetPolicy = () => {
+    const template = activePolicySlug === "privacy" ? FALLBACK_PRIVACY : FALLBACK_TERMS;
+    setPolicyForm({
+      slug: template.slug,
+      title: template.title,
+      subtitle: template.subtitle,
+      last_updated: template.last_updated,
+      content: JSON.parse(JSON.stringify(template.content))
+    });
+    showToast(`Reset to default ${template.title} template. Click 'Save Policy Changes' to commit.`, "info");
+  };
+
+  // Synchronize active tab with URL path: /admin, /admin/books, /admin/users, /admin/orders, /admin/announcement, /admin/policies
   const getActiveTab = () => {
     const raw = (currentPath || currentRoute || "admin").replace(/^[#/]+/, "");
     const parts = raw.split("?")[0].split("/");
@@ -202,11 +431,18 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "users") return "users";
     if (sub === "orders") return "orders";
     if (sub === "announcement" || sub === "banner") return "announcement";
+    if (sub === "policies" || sub === "legal" || sub === "terms" || sub === "privacy") return "policies";
     if (sub === "overview" || sub === "dashboard") return "overview";
     return "overview";
   };
 
   const activeTab = getActiveTab();
+
+  useEffect(() => {
+    if (activeTab === "policies") {
+      fetchPolicy(activePolicySlug);
+    }
+  }, [activeTab, activePolicySlug, fetchPolicy]);
 
   const handleTabChange = (tab) => {
     if (tab === "overview") {
@@ -670,6 +906,14 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             </span>
           </button>
 
+          <button
+            className={`admin-sidebar-link ${activeTab === "policies" ? "active" : ""}`}
+            onClick={() => handleTabChange("policies")}
+          >
+            <FileText size={18} />
+            <span>Terms & Privacy</span>
+          </button>
+
           <a
             href="/"
             className="admin-sidebar-link store-switch"
@@ -721,6 +965,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 {activeTab === "users" && "User Accounts & Details"}
                 {activeTab === "orders" && "Customer Orders"}
                 {activeTab === "announcement" && "Store Announcement Banner"}
+                {activeTab === "policies" && "Legal Policies (Terms & Privacy)"}
               </strong>
             </div>
           </div>
@@ -1504,6 +1749,233 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 </div>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 6: STORE LEGAL POLICIES (Terms & Conditions & Privacy Policy)
+            ========================================================================= */}
+        {activeTab === "policies" && (
+          <div className="admin-tab-panel policy-manager-panel">
+            {/* Page Header */}
+            <div className="policy-page-header">
+              <div className="header-text-group">
+                <div className="header-badge-row">
+                  <span className="section-kicker">Store Governance & Compliance</span>
+                  <span className="status-pill live">
+                    <span className="dot"></span>
+                    Live on Public Store
+                  </span>
+                </div>
+                <h2>Legal Policies & Store Terms</h2>
+                <p>
+                  Manage the Terms & Conditions and Privacy Policy pages. Changes are saved to MySQL and immediately update the public legal pages.
+                </p>
+              </div>
+
+              <div className="header-action-group">
+                <button
+                  type="button"
+                  className="btn-store-preview"
+                  onClick={() => navigate(`/${activePolicySlug}`)}
+                  title="View this policy on public store"
+                >
+                  <ExternalLink size={15} />
+                  <span>View Public Page</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Document Selector Switcher */}
+            <div className="policy-doc-switcher">
+              <button
+                type="button"
+                className={`policy-doc-btn ${activePolicySlug === "terms" ? "active" : ""}`}
+                onClick={() => handleSwitchPolicyTab("terms")}
+              >
+                <FileText size={18} />
+                <div className="doc-btn-text">
+                  <strong>Terms & Conditions</strong>
+                  <small>/terms & /terms-and-conditions</small>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`policy-doc-btn ${activePolicySlug === "privacy" ? "active" : ""}`}
+                onClick={() => handleSwitchPolicyTab("privacy")}
+              >
+                <ShieldCheck size={18} />
+                <div className="doc-btn-text">
+                  <strong>Privacy Policy</strong>
+                  <small>/privacy & /privacy-policy</small>
+                </div>
+              </button>
+            </div>
+
+            {/* Main Policy Form */}
+            {loadingPolicy ? (
+              <div className="policy-loading-card">
+                <RotateCcw size={20} className="spin" />
+                <span>Loading policy data from MySQL…</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSavePolicy} className="policy-editor-form">
+                {/* Meta details card */}
+                <div className="policy-meta-card">
+                  <div className="card-section-title">
+                    <Edit2 size={16} />
+                    <h3>Document Information</h3>
+                  </div>
+
+                  <div className="policy-meta-grid">
+                    <div className="admin-form-group">
+                      <label htmlFor="policyTitle">Document Page Title *</label>
+                      <input
+                        id="policyTitle"
+                        type="text"
+                        required
+                        value={policyForm.title}
+                        onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })}
+                        placeholder="e.g. Terms & Conditions"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="policyLastUpdated">Last Updated Date *</label>
+                      <input
+                        id="policyLastUpdated"
+                        type="text"
+                        required
+                        value={policyForm.last_updated}
+                        onChange={(e) => setPolicyForm({ ...policyForm, last_updated: e.target.value })}
+                        placeholder="e.g. October 2026"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label htmlFor="policySubtitle">Subtitle / Tagline</label>
+                    <input
+                      id="policySubtitle"
+                      type="text"
+                      value={policyForm.subtitle}
+                      onChange={(e) => setPolicyForm({ ...policyForm, subtitle: e.target.value })}
+                      placeholder="e.g. Clear guidelines and mutual commitments for an exceptional reading journey."
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label htmlFor="policyIntro">Summary / Introduction Notice</label>
+                    <textarea
+                      id="policyIntro"
+                      rows={3}
+                      value={policyForm.content?.intro || ""}
+                      onChange={(e) =>
+                        setPolicyForm({
+                          ...policyForm,
+                          content: { ...policyForm.content, intro: e.target.value }
+                        })
+                      }
+                      placeholder="Introductory text describing the purpose of this agreement..."
+                    />
+                  </div>
+                </div>
+
+                {/* Clauses / Sections Card */}
+                <div className="policy-clauses-card">
+                  <div className="clauses-card-header">
+                    <div>
+                      <div className="card-section-title" style={{ borderBottom: "none", margin: 0, padding: 0 }}>
+                        <FileText size={16} />
+                        <h3>Document Clauses & Sections ({policyForm.content?.sections?.length || 0})</h3>
+                      </div>
+                      <p className="clauses-sub">
+                        Add, reorder, or edit specific terms, refund clauses, delivery rules, or privacy terms.
+                      </p>
+                    </div>
+                    <button type="button" className="btn-add-clause" onClick={handleAddClause}>
+                      <Plus size={15} />
+                      <span>Add Clause</span>
+                    </button>
+                  </div>
+
+                  <div className="clauses-editor-list">
+                    {policyForm.content?.sections?.map((sec, idx) => (
+                      <div key={sec.id || idx} className="clause-editor-item">
+                        <div className="clause-editor-header">
+                          <span className="clause-number-pill">Clause {idx + 1}</span>
+                          <button
+                            type="button"
+                            className="btn-delete-clause"
+                            onClick={() => handleRemoveClause(idx)}
+                            title="Delete this clause"
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+
+                        <div className="clause-input-fields">
+                          <div className="admin-form-group">
+                            <label>Clause Heading *</label>
+                            <input
+                              type="text"
+                              value={sec.heading}
+                              onChange={(e) => handleClauseChange(idx, "heading", e.target.value)}
+                              placeholder={`e.g. ${idx + 1}. Acceptance of Terms`}
+                              required
+                            />
+                          </div>
+
+                          <div className="admin-form-group">
+                            <label>Clause Terms & Details *</label>
+                            <textarea
+                              rows={4}
+                              value={sec.body}
+                              onChange={(e) => handleClauseChange(idx, "body", e.target.value)}
+                              placeholder="Detail the exact commitments, legal rights, or guidelines..."
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {(!policyForm.content?.sections || policyForm.content.sections.length === 0) && (
+                      <div className="empty-clauses-notice">
+                        <AlertCircle size={20} />
+                        <span>No clauses in this document yet. Click 'Add Clause' or 'Reset to Template'.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sticky Action Footer */}
+                <div className="announcement-actions-bar policy-actions-bar">
+                  <button
+                    type="button"
+                    className="btn-reset-defaults"
+                    onClick={handleResetPolicy}
+                    disabled={savingPolicy}
+                  >
+                    <RotateCcw size={15} />
+                    <span>Reset to Template</span>
+                  </button>
+
+                  <div className="actions-right">
+                    <button
+                      type="submit"
+                      className="btn-save-announcement"
+                      disabled={savingPolicy}
+                    >
+                      <CheckCircle size={16} />
+                      <span>{savingPolicy ? "Saving Changes…" : `Save ${policyForm.title} Changes`}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         )}
         </div>

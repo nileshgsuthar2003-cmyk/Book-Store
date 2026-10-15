@@ -1,3 +1,4 @@
+import json
 from flask import Blueprint, request, jsonify
 from database import get_db_connection
 from app.utils.auth import admin_required
@@ -265,5 +266,57 @@ def update_announcement():
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"Failed to update announcement: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@admin_bp.route("/policies/<slug>", methods=["PUT"])
+@admin_required
+def update_policy(slug):
+    slug = (slug or "").strip().lower()
+    data = request.get_json() or {}
+    title = (data.get("title") or "").strip()
+    subtitle = (data.get("subtitle") or "").strip()
+    last_updated = (data.get("last_updated") or "October 2026").strip()
+    content = data.get("content")
+
+    if not title:
+        return jsonify({"error": "Policy title is required."}), 400
+
+    if content is None:
+        return jsonify({"error": "Policy content is required."}), 400
+
+    if not isinstance(content, str):
+        content_json = json.dumps(content)
+    else:
+        content_json = content
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO store_policies (slug, title, subtitle, last_updated, content)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    title = VALUES(title),
+                    subtitle = VALUES(subtitle),
+                    last_updated = VALUES(last_updated),
+                    content = VALUES(content);
+            """, (slug, title, subtitle, last_updated, content_json))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Policy '{title}' updated successfully!",
+            "policy": {
+                "slug": slug,
+                "title": title,
+                "subtitle": subtitle,
+                "last_updated": last_updated,
+                "content": content
+            }
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update policy: {str(e)}"}), 500
     finally:
         conn.close()

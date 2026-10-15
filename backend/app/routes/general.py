@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from database import get_db_connection
@@ -202,6 +203,50 @@ def get_announcement():
                 "tag_text": row["tag_text"],
                 "bg_theme": row["bg_theme"],
                 "link_url": row["link_url"] or "",
+                "updated_at": str(row.get("updated_at") or "")
+            }
+        })
+    finally:
+        conn.close()
+
+@general_bp.route("/policies", methods=["GET"])
+def get_all_policies():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT slug, title, subtitle, last_updated, updated_at FROM store_policies ORDER BY id ASC;")
+            rows = cur.fetchall()
+        return jsonify({"policies": rows})
+    finally:
+        conn.close()
+
+@general_bp.route("/policies/<slug>", methods=["GET"])
+def get_policy_by_slug(slug):
+    slug = (slug or "").strip().lower()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_policies WHERE slug = %s LIMIT 1;", (slug,))
+            row = cur.fetchone()
+
+        if not row:
+            return jsonify({"error": f"Policy '{slug}' not found."}), 404
+
+        content = row["content"]
+        if isinstance(content, str):
+            try:
+                content = json.loads(content)
+            except Exception:
+                pass
+
+        return jsonify({
+            "policy": {
+                "id": row["id"],
+                "slug": row["slug"],
+                "title": row["title"],
+                "subtitle": row.get("subtitle") or "",
+                "last_updated": row.get("last_updated") or "October 2026",
+                "content": content,
                 "updated_at": str(row.get("updated_at") or "")
             }
         })

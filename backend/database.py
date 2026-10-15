@@ -1,3 +1,4 @@
+import json
 import pymysql
 import pymysql.cursors
 from config import Config
@@ -215,6 +216,126 @@ def init_db():
         (id, is_enabled, lead_text, separator_symbol, highlight_text, tag_text, bg_theme, link_url)
         VALUES (1, 1, 'A little something for your next chapter', '—', 'Save up to 40% on selected reads', '✦ Free shipping on orders over ₹799', 'navy', '/shop');
         """)
+
+        # Store Policies Table (Terms & Conditions, Privacy Policy)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS store_policies (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            slug VARCHAR(50) NOT NULL UNIQUE,
+            title VARCHAR(255) NOT NULL,
+            subtitle VARCHAR(255) NULL,
+            last_updated VARCHAR(100) DEFAULT 'October 2026',
+            content JSON NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        default_terms_content = json.dumps({
+            "intro": "Welcome to BookNest. These Terms and Conditions govern your use of our website, services, and the purchase of books from our catalog. By browsing, creating an account, or placing an order, you agree to comply with and be bound by these terms.",
+            "sections": [
+                {
+                    "id": "eligibility",
+                    "heading": "1. Acceptance of Terms & Eligibility",
+                    "body": "By accessing BookNest, you represent that you are at least 18 years of age or accessing the site under the supervision of a parent or legal guardian. If you do not agree with any part of these terms, please discontinue using the service immediately."
+                },
+                {
+                    "id": "accounts",
+                    "heading": "2. Accounts, Email OTP Verification & Security",
+                    "body": "To access certain features like order tracking and wishlists, you must register an account. During registration, a 6-digit email OTP is sent to verify your identity. You are responsible for safeguarding your password and account credentials. Notify us immediately of any unauthorized access."
+                },
+                {
+                    "id": "orders-pricing",
+                    "heading": "3. Book Orders, Pricing & Catalog Availability",
+                    "body": "All book orders placed are subject to inventory availability. We strive for 100% price accuracy, but in the rare event of a typographical error, BookNest reserves the right to cancel or rectify orders prior to dispatch. Prices are quoted in Indian Rupees (₹) inclusive of applicable taxes."
+                },
+                {
+                    "id": "shipping-delivery",
+                    "heading": "4. Shipping & Delivery Timeline",
+                    "body": "We offer free standard doorstep delivery on all orders over ₹799. Orders below ₹799 incur a standard shipping fee of ₹49. Most orders are dispatched within 24-48 business hours and delivered within 3-5 business days across India."
+                },
+                {
+                    "id": "returns-refunds",
+                    "heading": "5. Cancellations & Easy 7-Day Returns",
+                    "body": "You may cancel an order before it has been shipped. If you receive a book that is physically damaged, misprinted, or defective, you may initiate a return within 7 calendar days of delivery for a replacement or full refund to the original payment method."
+                },
+                {
+                    "id": "intellectual-property",
+                    "heading": "6. Intellectual Property & Copyrights",
+                    "body": "All book titles, cover illustrations, descriptions, brand graphics, and logos displayed on BookNest are the intellectual property of their respective publishers, authors, or BookNest Inc. Unauthorized reproduction or scraping is prohibited."
+                },
+                {
+                    "id": "conduct",
+                    "heading": "7. User Conduct & Reviews",
+                    "body": "When submitting book reviews or ratings, you agree not to submit unlawful, defamatory, or abusive content. BookNest reserves the right to moderate, edit, or remove reviews that violate community standards."
+                },
+                {
+                    "id": "liability",
+                    "heading": "8. Limitation of Liability & Jurisdiction",
+                    "body": "BookNest shall not be liable for any indirect, incidental, or consequential damages resulting from the use of the platform. These terms are governed in accordance with the laws of India, subject to the jurisdiction of competent courts."
+                },
+                {
+                    "id": "contact",
+                    "heading": "9. Contact Information & Support",
+                    "body": "For queries or concerns regarding these terms, reach our support team at hello@booknest.example or via telephone at +91 (800) 266-5637 (Mon-Sat, 9am - 7pm IST)."
+                }
+            ]
+        })
+
+        default_privacy_content = json.dumps({
+            "intro": "At BookNest, your privacy is a foundational priority. This Privacy Policy describes how we collect, use, store, and protect your personal information when you browse our bookstore, create an account, or order books.",
+            "sections": [
+                {
+                    "id": "collection",
+                    "heading": "1. Information We Collect",
+                    "body": "We collect information you provide directly, such as your full name, email address, contact phone number, delivery address, city, state, and pin code. We also collect transactional details regarding books purchased and saved wishlist titles."
+                },
+                {
+                    "id": "usage",
+                    "heading": "2. How We Use Your Information",
+                    "body": "Your data is used solely to process book orders, verify your account via one-time verification codes (OTPs), coordinate doorstep deliveries, send transactional order invoices, and offer personalized reading recommendations."
+                },
+                {
+                    "id": "security",
+                    "heading": "3. Security & Payment Data Protection",
+                    "body": "We implement industry-standard encryption, SSL/TLS transmission protocols, and strict access controls. BookNest does not store your credit/debit card numbers or CVV codes; all payment processing is securely managed by certified PCI-DSS compliant payment gateways."
+                },
+                {
+                    "id": "sharing",
+                    "heading": "4. Information Sharing & Third Parties",
+                    "body": "We do not sell, rent, or monetize your personal details. We share relevant data only with vetted logistics and delivery partners (e.g. courier services) solely to ensure timely book dispatch and package delivery."
+                },
+                {
+                    "id": "cookies",
+                    "heading": "5. Cookies & Local Storage",
+                    "body": "We use essential cookies and browser local storage to preserve your shopping bag, wishlist, and session authentication tokens between visits for a seamless reading and shopping experience."
+                },
+                {
+                    "id": "user-rights",
+                    "heading": "6. Your Data Rights & Choices",
+                    "body": "You have the right to view, update, or edit your saved profile information and delivery address at any time from your Account Profile page. You may also request deletion of your account and associated history by contacting support."
+                },
+                {
+                    "id": "updates",
+                    "heading": "7. Policy Updates & Notifications",
+                    "body": "We may update this Privacy Policy periodically to reflect changes in our legal obligations or store enhancements. Any significant revisions will be indicated by the 'Last Updated' date at the top of this page."
+                },
+                {
+                    "id": "privacy-contact",
+                    "heading": "8. Privacy Inquiries & Data Officer",
+                    "body": "If you have any questions about this privacy statement or our handling of your data, please contact our Data Protection desk at privacy@booknest.example."
+                }
+            ]
+        })
+
+        cur.execute("""
+            INSERT IGNORE INTO store_policies (slug, title, subtitle, last_updated, content)
+            VALUES (%s, %s, %s, %s, %s);
+        """, ("terms", "Terms & Conditions", "Clear guidelines and mutual commitments for an exceptional reading journey.", "October 2026", default_terms_content))
+
+        cur.execute("""
+            INSERT IGNORE INTO store_policies (slug, title, subtitle, last_updated, content)
+            VALUES (%s, %s, %s, %s, %s);
+        """, ("privacy", "Privacy Policy", "How we protect, respect, and handle your personal reading data.", "October 2026", default_privacy_content))
 
     conn.commit()
     conn.close()

@@ -178,5 +178,14 @@ export const api = {
     request("/admin/announcement", {
       method: "PUT",
       body: JSON.stringify(data)
+    }),
+
+  // Legal & Store Policies (Terms & Conditions, Privacy Policy)
+  getPolicies: () => request("/policies"),
+  getPolicy: (slug) => request(`/policies/${slug}`),
+  updatePolicy: (slug, data) =>
+    request(`/admin/policies/${slug}`, {
+      method: "PUT",
+      body: JSON.stringify(data)
     })
 };

@@ -61,8 +61,11 @@ export const Footer = () => {
             <a href="/wishlist" onClick={(e) => handleLink(e, "/wishlist")}>
               Saved Wishlist
             </a>
-            <a href="/about" onClick={(e) => handleLink(e, "/about")}>
-              Reading Community
+            <a href="/terms" onClick={(e) => handleLink(e, "/terms")}>
+              Terms & Conditions
+            </a>
+            <a href="/privacy" onClick={(e) => handleLink(e, "/privacy")}>
+              Privacy Policy
             </a>
           </div>
 
@@ -81,6 +84,14 @@ export const Footer = () => {
         <div className="footer-bottom">
           <p>© 2026 BookNest Inc. Crafted with devotion for the love of reading.</p>
           <div className="footer-bottom-links">
+            <a href="/terms" onClick={(e) => handleLink(e, "/terms")} className="footer-legal-link">
+              Terms & Conditions
+            </a>
+            <span>•</span>
+            <a href="/privacy" onClick={(e) => handleLink(e, "/privacy")} className="footer-legal-link">
+              Privacy Policy
+            </a>
+            <span>•</span>
             <span>Free Shipping Over ₹799</span>
             <span>•</span>
             <span>Easy 7-day Returns</span>

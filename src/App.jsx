@@ -17,6 +17,7 @@ import { Wishlist } from "./pages/Wishlist";
 import { About } from "./pages/About";
 import { Profile } from "./pages/Profile";
 import { AdminPanel } from "./pages/AdminPanel";
+import { LegalPage } from "./pages/LegalPage";
 
 export const AppContent = () => {
   const { currentRoute } = useShop();
@@ -59,6 +60,12 @@ export const AppContent = () => {
       case "profile":
       case "account":
         return <Profile />;
+      case "terms":
+      case "terms-and-conditions":
+        return <LegalPage slug="terms" />;
+      case "privacy":
+      case "privacy-policy":
+        return <LegalPage slug="privacy" />;
       case "home":
       case "":
       default:
