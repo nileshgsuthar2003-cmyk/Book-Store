@@ -259,6 +259,16 @@ h1, h2, .serif {
   flex-direction: column;
 }
 
+.brand-title {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+
 .brand-accent {
   color: var(--amber-dark);
 }
@@ -270,6 +280,7 @@ h1, h2, .serif {
   margin-top: 4px;
   color: var(--muted);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .backend-status-pill {

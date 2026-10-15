@@ -74,7 +74,7 @@ export const Header = () => {
           <BookOpen size={20} strokeWidth={2.4} />
         </span>
         <span className="brand-text">
-          book<span className="brand-accent">nest</span>
+          <span className="brand-title">book<span className="brand-accent">nest</span></span>
           <small>FIND YOUR NEXT CHAPTER</small>
         </span>
       </a>
