@@ -180,3 +180,90 @@ def delete_user(user_id):
         return jsonify({"error": f"Failed to delete user: {str(e)}"}), 500
     finally:
         conn.close()
+
+@admin_bp.route("/announcement", methods=["GET"])
+@admin_required
+def get_admin_announcement():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_announcement WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "id": 1,
+                "is_enabled": 1,
+                "lead_text": "A little something for your next chapter",
+                "separator_symbol": "—",
+                "highlight_text": "Save up to 40% on selected reads",
+                "tag_text": "✦ Free shipping on orders over ₹799",
+                "bg_theme": "navy",
+                "link_url": "/shop"
+            }
+
+        return jsonify({
+            "announcement": {
+                "id": row["id"],
+                "is_enabled": bool(row["is_enabled"]),
+                "lead_text": row["lead_text"],
+                "separator_symbol": row["separator_symbol"],
+                "highlight_text": row["highlight_text"],
+                "tag_text": row["tag_text"],
+                "bg_theme": row["bg_theme"],
+                "link_url": row["link_url"] or "",
+                "updated_at": str(row.get("updated_at") or "")
+            }
+        })
+    finally:
+        conn.close()
+
+@admin_bp.route("/announcement", methods=["PUT"])
+@admin_required
+def update_announcement():
+    data = request.get_json() or {}
+    is_enabled = 1 if data.get("is_enabled", True) else 0
+    lead_text = (data.get("lead_text") or "").strip()
+    separator_symbol = (data.get("separator_symbol") or "—").strip()
+    highlight_text = (data.get("highlight_text") or "").strip()
+    tag_text = (data.get("tag_text") or "").strip()
+    bg_theme = (data.get("bg_theme") or "navy").strip()
+    link_url = (data.get("link_url") or "").strip()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO store_announcement 
+                    (id, is_enabled, lead_text, separator_symbol, highlight_text, tag_text, bg_theme, link_url)
+                VALUES (1, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    is_enabled = VALUES(is_enabled),
+                    lead_text = VALUES(lead_text),
+                    separator_symbol = VALUES(separator_symbol),
+                    highlight_text = VALUES(highlight_text),
+                    tag_text = VALUES(tag_text),
+                    bg_theme = VALUES(bg_theme),
+                    link_url = VALUES(link_url);
+            """, (is_enabled, lead_text, separator_symbol, highlight_text, tag_text, bg_theme, link_url))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Top announcement bar updated successfully!",
+            "announcement": {
+                "id": 1,
+                "is_enabled": bool(is_enabled),
+                "lead_text": lead_text,
+                "separator_symbol": separator_symbol,
+                "highlight_text": highlight_text,
+                "tag_text": tag_text,
+                "bg_theme": bg_theme,
+                "link_url": link_url
+            }
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to update announcement: {str(e)}"}), 500
+    finally:
+        conn.close()

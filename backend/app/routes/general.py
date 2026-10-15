@@ -171,3 +171,39 @@ def toggle_wishlist():
         return jsonify({"success": True, "saved": saved, "book_id": book_id})
     finally:
         conn.close()
+
+@general_bp.route("/announcement", methods=["GET"])
+def get_announcement():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM store_announcement WHERE id = 1 LIMIT 1;")
+            row = cur.fetchone()
+
+        if not row:
+            row = {
+                "id": 1,
+                "is_enabled": 1,
+                "lead_text": "A little something for your next chapter",
+                "separator_symbol": "—",
+                "highlight_text": "Save up to 40% on selected reads",
+                "tag_text": "✦ Free shipping on orders over ₹799",
+                "bg_theme": "navy",
+                "link_url": "/shop"
+            }
+
+        return jsonify({
+            "announcement": {
+                "id": row["id"],
+                "is_enabled": bool(row["is_enabled"]),
+                "lead_text": row["lead_text"],
+                "separator_symbol": row["separator_symbol"],
+                "highlight_text": row["highlight_text"],
+                "tag_text": row["tag_text"],
+                "bg_theme": row["bg_theme"],
+                "link_url": row["link_url"] or "",
+                "updated_at": str(row.get("updated_at") or "")
+            }
+        })
+    finally:
+        conn.close()

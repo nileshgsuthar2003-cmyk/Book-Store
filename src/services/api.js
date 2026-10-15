@@ -170,5 +170,13 @@ export const api = {
     request("/wishlist/toggle", {
       method: "POST",
       body: JSON.stringify({ book_id: Number(bookId) })
+    }),
+
+  // Store Announcement Top Banner
+  getAnnouncement: () => request("/announcement"),
+  updateAnnouncement: (data) =>
+    request("/admin/announcement", {
+      method: "PUT",
+      body: JSON.stringify(data)
     })
 };

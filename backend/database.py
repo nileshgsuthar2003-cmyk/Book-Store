@@ -194,6 +194,28 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
 
+        # Store Announcement Top Banner Table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS store_announcement (
+            id INT PRIMARY KEY DEFAULT 1,
+            is_enabled TINYINT(1) DEFAULT 1,
+            lead_text VARCHAR(255) DEFAULT 'A little something for your next chapter',
+            separator_symbol VARCHAR(10) DEFAULT '—',
+            highlight_text VARCHAR(255) DEFAULT 'Save up to 40% on selected reads',
+            tag_text VARCHAR(255) DEFAULT '✦ Free shipping on orders over ₹799',
+            bg_theme VARCHAR(50) DEFAULT 'navy',
+            link_url VARCHAR(255) DEFAULT '/shop',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        # Ensure default announcement row exists
+        cur.execute("""
+        INSERT IGNORE INTO store_announcement 
+        (id, is_enabled, lead_text, separator_symbol, highlight_text, tag_text, bg_theme, link_url)
+        VALUES (1, 1, 'A little something for your next chapter', '—', 'Save up to 40% on selected reads', '✦ Free shipping on orders over ₹799', 'navy', '/shop');
+        """)
+
     conn.commit()
     conn.close()
     print("MySQL database and tables successfully initialized.")

@@ -28,12 +28,102 @@ import {
   AlertCircle,
   Star,
   Flame,
-  TrendingUp
+  TrendingUp,
+  Megaphone,
+  Sparkles,
+  Palette,
+  Globe,
+  Check
 } from "lucide-react";
+
+const THEME_OPTIONS = [
+  { id: "navy", name: "Midnight Navy", bg: "#0f172a", text: "#f8f5ed", accent: "#ffc45a" },
+  { id: "terracotta", name: "Terracotta Sunset", bg: "#c2410c", text: "#fff7ed", accent: "#fef08a" },
+  { id: "emerald", name: "Forest Emerald", bg: "#065f46", text: "#ecfdf5", accent: "#6ee7b7" },
+  { id: "wine", name: "Regal Plum / Wine", bg: "#701a75", text: "#fdf4ff", accent: "#f5d0fe" },
+  { id: "amber", name: "Golden Amber", bg: "#78350f", text: "#fffbeb", accent: "#fde68a" },
+  { id: "dark", name: "Onyx Minimal", bg: "#18181b", text: "#fafafa", accent: "#38bdf8" }
+];
+
+const ANNOUNCEMENT_PRESETS = [
+  {
+    label: "Default Reading Perks",
+    desc: "A little something for your next chapter — Save up to 40% on selected reads",
+    data: {
+      is_enabled: true,
+      lead_text: "A little something for your next chapter",
+      separator_symbol: "—",
+      highlight_text: "Save up to 40% on selected reads",
+      tag_text: "✦ Free shipping on orders over ₹799",
+      bg_theme: "navy",
+      link_url: "/shop"
+    }
+  },
+  {
+    label: "Festive Grand Sale",
+    desc: "Celebrate with Stories — Flat 50% OFF on Bestsellers",
+    data: {
+      is_enabled: true,
+      lead_text: "Celebrate with Stories",
+      separator_symbol: "—",
+      highlight_text: "Flat 50% OFF on Bestsellers",
+      tag_text: "✦ Use code FESTIVE50",
+      bg_theme: "wine",
+      link_url: "/shop"
+    }
+  },
+  {
+    label: "Weekend Flash Deal",
+    desc: "Weekend Reading Fest is Live • Buy 2 Get 1 Free on all Fiction",
+    data: {
+      is_enabled: true,
+      lead_text: "Weekend Reading Fest is Live",
+      separator_symbol: "•",
+      highlight_text: "Buy 2 Get 1 Free on all Fiction",
+      tag_text: "✦ Limited Hours Only",
+      bg_theme: "terracotta",
+      link_url: "/categories"
+    }
+  },
+  {
+    label: "Free Express Shipping",
+    desc: "Special Delivery Perk — Free express doorstep delivery on all orders",
+    data: {
+      is_enabled: true,
+      lead_text: "Special Delivery Perk",
+      separator_symbol: "—",
+      highlight_text: "Free express doorstep delivery on all orders",
+      tag_text: "✦ No minimum cart required",
+      bg_theme: "emerald",
+      link_url: "/shop"
+    }
+  },
+  {
+    label: "Autumn New Releases",
+    desc: "Fresh on the Shelves — Explore 50+ new releases for this season",
+    data: {
+      is_enabled: true,
+      lead_text: "Fresh on the Shelves",
+      separator_symbol: "—",
+      highlight_text: "Explore 50+ new releases for this season",
+      tag_text: "✦ Handpicked titles",
+      bg_theme: "amber",
+      link_url: "/shop"
+    }
+  }
+];
 
 export const AdminPanel = ({ currentPath = "admin" }) => {
   const { user, isAdmin, login, logout } = useAuth();
-  const { showToast, refreshBooks, navigate, currentRoute } = useShop();
+  const {
+    showToast,
+    refreshBooks,
+    navigate,
+    currentRoute,
+    announcement: globalAnnouncement,
+    setAnnouncement: setGlobalAnnouncement,
+    refreshAnnouncement
+  } = useShop();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
@@ -47,7 +137,63 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Synchronize active tab with URL path: /admin, /admin/books, /admin/users, /admin/orders
+  // Announcement bar state
+  const [announcementForm, setAnnouncementForm] = useState({
+    is_enabled: true,
+    lead_text: "A little something for your next chapter",
+    separator_symbol: "—",
+    highlight_text: "Save up to 40% on selected reads",
+    tag_text: "✦ Free shipping on orders over ₹799",
+    bg_theme: "navy",
+    link_url: "/shop"
+  });
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+
+  useEffect(() => {
+    if (globalAnnouncement) {
+      setAnnouncementForm({
+        is_enabled: Boolean(globalAnnouncement.is_enabled),
+        lead_text: globalAnnouncement.lead_text || "",
+        separator_symbol: globalAnnouncement.separator_symbol || "—",
+        highlight_text: globalAnnouncement.highlight_text || "",
+        tag_text: globalAnnouncement.tag_text || "",
+        bg_theme: globalAnnouncement.bg_theme || "navy",
+        link_url: globalAnnouncement.link_url || ""
+      });
+    }
+  }, [globalAnnouncement]);
+
+  const handleSaveAnnouncement = async (e) => {
+    if (e) e.preventDefault();
+    setSavingAnnouncement(true);
+    try {
+      const res = await api.updateAnnouncement(announcementForm);
+      if (res && res.announcement) {
+        setGlobalAnnouncement(res.announcement);
+      }
+      showToast("Top announcement banner updated successfully!", "success");
+    } catch (err) {
+      showToast(err.message || "Failed to update announcement.", "warning");
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleResetAnnouncement = () => {
+    const defaultData = {
+      is_enabled: true,
+      lead_text: "A little something for your next chapter",
+      separator_symbol: "—",
+      highlight_text: "Save up to 40% on selected reads",
+      tag_text: "✦ Free shipping on orders over ₹799",
+      bg_theme: "navy",
+      link_url: "/shop"
+    };
+    setAnnouncementForm(defaultData);
+    showToast("Reset form to default banner. Click 'Save Announcement Changes' to apply.", "info");
+  };
+
+  // Synchronize active tab with URL path: /admin, /admin/books, /admin/users, /admin/orders, /admin/announcement
   const getActiveTab = () => {
     const raw = (currentPath || currentRoute || "admin").replace(/^[#/]+/, "");
     const parts = raw.split("?")[0].split("/");
@@ -55,6 +201,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
     if (sub === "books") return "books";
     if (sub === "users") return "users";
     if (sub === "orders") return "orders";
+    if (sub === "announcement" || sub === "banner") return "announcement";
     if (sub === "overview" || sub === "dashboard") return "overview";
     return "overview";
   };
@@ -510,7 +657,18 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
             <span className="sidebar-count">{orders.length}</span>
           </button>
 
-          <div className="sidebar-group-title">STOREFRONT</div>
+          <div className="sidebar-group-title">STOREFRONT & PROMOTIONS</div>
+
+          <button
+            className={`admin-sidebar-link ${activeTab === "announcement" ? "active" : ""}`}
+            onClick={() => handleTabChange("announcement")}
+          >
+            <Megaphone size={18} />
+            <span>Top Announcement</span>
+            <span className={`sidebar-pill-badge ${announcementForm.is_enabled ? "active" : "muted"}`}>
+              {announcementForm.is_enabled ? "ON" : "OFF"}
+            </span>
+          </button>
 
           <a
             href="/"
@@ -562,6 +720,7 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 {activeTab === "books" && "Books Catalog & Visibility"}
                 {activeTab === "users" && "User Accounts & Details"}
                 {activeTab === "orders" && "Customer Orders"}
+                {activeTab === "announcement" && "Store Announcement Banner"}
               </strong>
             </div>
           </div>
@@ -1040,6 +1199,311 @@ export const AdminPanel = ({ currentPath = "admin" }) => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 5: TOP ANNOUNCEMENT BANNER MANAGEMENT
+            ========================================================================= */}
+        {activeTab === "announcement" && (
+          <div className="admin-tab-panel announcement-manager-panel">
+            {/* Page Header */}
+            <div className="announcement-page-header">
+              <div className="header-text-group">
+                <div className="header-badge-row">
+                  <span className="section-kicker">Storefront Settings</span>
+                  <span className={`status-pill ${announcementForm.is_enabled ? "live" : "paused"}`}>
+                    <span className="dot"></span>
+                    {announcementForm.is_enabled ? "Currently Visible to Shoppers" : "Hidden from Shoppers"}
+                  </span>
+                </div>
+                <h2>Store Announcement Bar</h2>
+                <p>
+                  Customize the promotional banner displayed at the very top of all public storefront pages.
+                </p>
+              </div>
+
+              <div className="header-action-group">
+                <button
+                  type="button"
+                  className="btn-store-preview"
+                  onClick={() => navigate("/")}
+                  title="Open public store in view mode"
+                >
+                  <ExternalLink size={15} />
+                  <span>View Public Store</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Interactive Preview Card */}
+            <div className="announcement-preview-card">
+              <div className="preview-card-header">
+                <div className="browser-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <div className="preview-label">
+                  <Sparkles size={14} />
+                  <span>Live Storefront Preview (Updates in real time)</span>
+                </div>
+                <span className="preview-theme-indicator">
+                  Theme: <strong>{announcementForm.bg_theme}</strong>
+                </span>
+              </div>
+
+              <div className="preview-browser-canvas">
+                {announcementForm.is_enabled ? (
+                  <div
+                    className={`announcement-mockup announcement announcement-${announcementForm.bg_theme || "navy"}`}
+                  >
+                    {announcementForm.lead_text && <span>{announcementForm.lead_text}</span>}
+                    {announcementForm.lead_text && (announcementForm.highlight_text || announcementForm.tag_text) && (
+                      <span className="announcement-sep">{announcementForm.separator_symbol || "—"}</span>
+                    )}
+                    {announcementForm.highlight_text && <strong>{announcementForm.highlight_text}</strong>}
+                    {announcementForm.tag_text && (
+                      <span className="announcement-tag">{announcementForm.tag_text}</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="announcement-disabled-placeholder">
+                    <EyeOff size={16} />
+                    <span>The announcement bar is currently turned OFF. Customers will not see any banner.</span>
+                  </div>
+                )}
+
+                {/* Simulated Mini Nav Bar */}
+                <div className="preview-mock-header">
+                  <div className="mock-brand">
+                    <strong>book<span>nest</span></strong>
+                  </div>
+                  <div className="mock-links">
+                    <span>Home</span>
+                    <span>Books</span>
+                    <span>Categories</span>
+                    <span>Bestsellers</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Form & Preset Grid */}
+            <form onSubmit={handleSaveAnnouncement} className="announcement-editor-form">
+              <div className="announcement-editor-grid">
+                
+                {/* Left Column: Form Controls */}
+                <div className="editor-main-card">
+                  <div className="card-section-title">
+                    <Megaphone size={18} />
+                    <h3>Banner Content & Messages</h3>
+                  </div>
+
+                  {/* Toggle Switch */}
+                  <div className="announcement-switch-field">
+                    <div className="switch-info">
+                      <strong>Enable Announcement Bar</strong>
+                      <p>Show or hide this promotion across the public storefront.</p>
+                    </div>
+                    <label className="admin-toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={announcementForm.is_enabled}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, is_enabled: e.target.checked })
+                        }
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  {/* Field 1: Lead Message */}
+                  <div className="admin-form-group">
+                    <label htmlFor="leadText">
+                      Lead Message / Prefix
+                      <span className="field-hint">e.g. "A little something for your next chapter"</span>
+                    </label>
+                    <input
+                      id="leadText"
+                      type="text"
+                      value={announcementForm.lead_text}
+                      onChange={(e) =>
+                        setAnnouncementForm({ ...announcementForm, lead_text: e.target.value })
+                      }
+                      placeholder="e.g. A little something for your next chapter"
+                    />
+                  </div>
+
+                  {/* Field 2: Separator */}
+                  <div className="admin-form-group">
+                    <label htmlFor="sepSymbol">
+                      Separator Symbol
+                      <span className="field-hint">Divider between prefix and bold highlight</span>
+                    </label>
+                    <div className="separator-input-row">
+                      <input
+                        id="sepSymbol"
+                        type="text"
+                        maxLength={5}
+                        value={announcementForm.separator_symbol}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, separator_symbol: e.target.value })
+                        }
+                        className="short-sep-input"
+                      />
+                      <div className="quick-symbol-chips">
+                        {["—", "•", "|", "✦", "★", "~"].map((sym) => (
+                          <button
+                            key={sym}
+                            type="button"
+                            className={`symbol-chip ${announcementForm.separator_symbol === sym ? "selected" : ""}`}
+                            onClick={() => setAnnouncementForm({ ...announcementForm, separator_symbol: sym })}
+                          >
+                            {sym}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Field 3: Highlight Text */}
+                  <div className="admin-form-group">
+                    <label htmlFor="highlightText">
+                      Highlighted / Bold Promo Text
+                      <span className="field-hint">e.g. "Save up to 40% on selected reads"</span>
+                    </label>
+                    <input
+                      id="highlightText"
+                      type="text"
+                      value={announcementForm.highlight_text}
+                      onChange={(e) =>
+                        setAnnouncementForm({ ...announcementForm, highlight_text: e.target.value })
+                      }
+                      placeholder="e.g. Save up to 40% on selected reads"
+                    />
+                  </div>
+
+                  {/* Field 4: Tag / Badge Text */}
+                  <div className="admin-form-group">
+                    <label htmlFor="tagText">
+                      Tag / Badge Pill
+                      <span className="field-hint">e.g. "✦ Free shipping on orders over ₹799"</span>
+                    </label>
+                    <input
+                      id="tagText"
+                      type="text"
+                      value={announcementForm.tag_text}
+                      onChange={(e) =>
+                        setAnnouncementForm({ ...announcementForm, tag_text: e.target.value })
+                      }
+                      placeholder="e.g. ✦ Free shipping on orders over ₹799"
+                    />
+                  </div>
+
+                  {/* Field 5: Target Link URL */}
+                  <div className="admin-form-group">
+                    <label htmlFor="linkUrl">
+                      Click Destination URL (Optional)
+                      <span className="field-hint">Page to open when a customer clicks the banner (e.g. /shop, /categories)</span>
+                    </label>
+                    <div className="link-input-wrapper">
+                      <Globe size={16} className="link-icon" />
+                      <input
+                        id="linkUrl"
+                        type="text"
+                        value={announcementForm.link_url}
+                        onChange={(e) =>
+                          setAnnouncementForm({ ...announcementForm, link_url: e.target.value })
+                        }
+                        placeholder="/shop"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Visual Theme & Presets */}
+                <div className="editor-side-card">
+                  {/* Color Theme Selector */}
+                  <div className="card-section-title">
+                    <Palette size={18} />
+                    <h3>Color Scheme Theme</h3>
+                  </div>
+
+                  <div className="theme-swatch-grid">
+                    {THEME_OPTIONS.map((theme) => {
+                      const isSelected = announcementForm.bg_theme === theme.id;
+                      return (
+                        <div
+                          key={theme.id}
+                          className={`theme-swatch-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => setAnnouncementForm({ ...announcementForm, bg_theme: theme.id })}
+                        >
+                          <div className="swatch-color-bar" style={{ background: theme.bg }}>
+                            <span className="swatch-accent-dot" style={{ background: theme.accent }}></span>
+                          </div>
+                          <div className="swatch-info">
+                            <strong>{theme.name}</strong>
+                            <span className="swatch-preview-text" style={{ color: theme.accent }}>
+                              Preview
+                            </span>
+                          </div>
+                          {isSelected && <CheckCircle size={16} className="swatch-check-icon" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Campaign Presets */}
+                  <div className="card-section-title presets-title">
+                    <Sparkles size={18} />
+                    <h3>1-Click Campaign Presets</h3>
+                  </div>
+                  <p className="presets-sub">Click any template below to automatically fill the announcement bar:</p>
+
+                  <div className="presets-list">
+                    {ANNOUNCEMENT_PRESETS.map((preset, index) => (
+                      <div
+                        key={index}
+                        className="preset-item-card"
+                        onClick={() => {
+                          setAnnouncementForm({ ...preset.data });
+                          showToast(`Applied preset: "${preset.label}"`, "info");
+                        }}
+                      >
+                        <div className="preset-item-header">
+                          <strong>{preset.label}</strong>
+                          <span className="preset-apply-hint">Apply Template</span>
+                        </div>
+                        <p>{preset.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Bottom Sticky Actions */}
+              <div className="announcement-actions-bar">
+                <button
+                  type="button"
+                  className="btn-reset-defaults"
+                  onClick={handleResetAnnouncement}
+                  disabled={savingAnnouncement}
+                >
+                  <RotateCcw size={15} />
+                  <span>Reset to Default</span>
+                </button>
+
+                <div className="actions-right">
+                  <button
+                    type="submit"
+                    className="btn-save-announcement"
+                    disabled={savingAnnouncement}
+                  >
+                    <CheckCircle size={16} />
+                    <span>{savingAnnouncement ? "Saving Changes…" : "Save Announcement Changes"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         )}
         </div>

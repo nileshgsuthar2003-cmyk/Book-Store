@@ -22,11 +22,25 @@ const saveToStorage = (key, value) => {
   }
 };
 
+const DEFAULT_ANNOUNCEMENT = {
+  is_enabled: true,
+  lead_text: "A little something for your next chapter",
+  separator_symbol: "—",
+  highlight_text: "Save up to 40% on selected reads",
+  tag_text: "✦ Free shipping on orders over ₹799",
+  bg_theme: "navy",
+  link_url: "/shop"
+};
+
 export const ShopProvider = ({ children }) => {
   const [books, setBooks] = useState(FALLBACK_BOOKS);
   const [loadingBooks, setLoadingBooks] = useState(true);
   const [backendOnline, setBackendOnline] = useState(false);
   const [backendStats, setBackendStats] = useState(null);
+
+  const [announcement, setAnnouncement] = useState(() =>
+    loadFromStorage("bn-announcement", DEFAULT_ANNOUNCEMENT)
+  );
 
   const [cart, setCart] = useState(() => loadFromStorage("bn-cart", {}));
   const [wishlist, setWishlist] = useState(() => loadFromStorage("bn-wish", []));
@@ -57,15 +71,20 @@ export const ShopProvider = ({ children }) => {
     saveToStorage("bn-wish", wishlist);
   }, [wishlist]);
 
-  // Load books from Flask Backend on mount
+  useEffect(() => {
+    saveToStorage("bn-announcement", announcement);
+  }, [announcement]);
+
+  // Load books & announcement from Flask Backend on mount
   useEffect(() => {
     let isMounted = true;
 
     async function loadInitialData() {
       try {
-        const [healthRes, booksRes] = await Promise.all([
+        const [healthRes, booksRes, announcementRes] = await Promise.all([
           api.checkHealth().catch(() => null),
-          api.getBooks().catch(() => null)
+          api.getBooks().catch(() => null),
+          api.getAnnouncement().catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -79,6 +98,10 @@ export const ShopProvider = ({ children }) => {
 
         if (booksRes && Array.isArray(booksRes.books) && booksRes.books.length > 0) {
           setBooks(booksRes.books);
+        }
+
+        if (announcementRes && announcementRes.announcement) {
+          setAnnouncement(announcementRes.announcement);
         }
       } catch (err) {
         console.warn("Backend connection notice; using local fallback dataset:", err);
@@ -113,6 +136,19 @@ export const ShopProvider = ({ children }) => {
       }
     } finally {
       setLoadingBooks(false);
+    }
+  }, []);
+
+  const refreshAnnouncement = useCallback(async () => {
+    try {
+      const res = await api.getAnnouncement();
+      if (res && res.announcement) {
+        setAnnouncement(res.announcement);
+        saveToStorage("bn-announcement", res.announcement);
+        return res.announcement;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh announcement:", err);
     }
   }, []);
 
@@ -383,7 +419,10 @@ export const ShopProvider = ({ children }) => {
     applyCoupon,
     removeCoupon,
     placeOrder,
-    refreshBooks
+    refreshBooks,
+    announcement,
+    setAnnouncement,
+    refreshAnnouncement
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
