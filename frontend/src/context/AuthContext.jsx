@@ -67,12 +67,12 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.error || "Login failed");
   }, []);
 
-  const sendOtp = useCallback(async ({ email, name, purpose = "register" }) => {
-    return await api.sendOtp({ email, name, purpose });
+  const sendOtp = useCallback(async ({ email, name, phone = "", purpose = "register" }) => {
+    return await api.sendOtp({ email, name, phone, purpose });
   }, []);
 
-  const register = useCallback(async (name, email, password, otp = "") => {
-    const res = await api.register(name, email, password, otp);
+  const register = useCallback(async (name, email, password, otp = "", phone = "") => {
+    const res = await api.register(name, email, password, otp, phone);
     if (res.success && res.token) {
       setToken(res.token);
       setUser(res.user);

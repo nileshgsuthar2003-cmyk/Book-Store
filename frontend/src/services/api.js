@@ -41,17 +41,24 @@ export const api = {
       body: JSON.stringify({ email, password })
     }),
 
-  sendOtp: ({ email, name = "Book Lover", purpose = "register" }) =>
+  sendOtp: ({ email, name = "Book Lover", phone = "", purpose = "register" }) =>
     request("/auth/send-otp", {
       method: "POST",
-      body: JSON.stringify({ email, name, purpose })
+      body: JSON.stringify({ email, name, phone, purpose })
     }),
 
-  register: (name, email, password, otp = "") =>
-    request("/auth/register", {
+  register: (name, email, password, otp = "", phone = "") => {
+    if (typeof name === "object" && name !== null) {
+      return request("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(name)
+      });
+    }
+    return request("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password, otp })
-    }),
+      body: JSON.stringify({ name, email, password, otp, phone })
+    });
+  },
 
   getMe: () => request("/auth/me"),
 

@@ -407,17 +407,17 @@ def seed_database():
             # 1. Seed Default Admin User
             admin_pwd = generate_password_hash("admin123")
             cur.execute("""
-                INSERT INTO users (id, name, email, password_hash, role)
-                VALUES (1, 'Admin Nilesh', 'admin@booknest.com', %s, 'admin')
-                ON DUPLICATE KEY UPDATE name='Admin Nilesh', role='admin', password_hash=%s;
+                INSERT INTO users (id, name, email, password_hash, role, phone)
+                VALUES (1, 'Admin Nilesh', 'admin@booknest.com', %s, 'admin', '+91 98765 00001')
+                ON DUPLICATE KEY UPDATE name='Admin Nilesh', role='admin', password_hash=%s, phone='+91 98765 00001';
             """, (admin_pwd, admin_pwd))
 
             # 2. Seed Default Customer User
             user_pwd = generate_password_hash("user123")
             cur.execute("""
-                INSERT INTO users (id, name, email, password_hash, role)
-                VALUES (2, 'Maya Sharma', 'user@example.com', %s, 'user')
-                ON DUPLICATE KEY UPDATE name='Maya Sharma', role='user', password_hash=%s;
+                INSERT INTO users (id, name, email, password_hash, role, phone)
+                VALUES (2, 'Maya Sharma', 'user@example.com', %s, 'user', '+91 98765 43210')
+                ON DUPLICATE KEY UPDATE name='Maya Sharma', role='user', password_hash=%s, phone='+91 98765 43210';
             """, (user_pwd, user_pwd))
 
             # 3. Seed Categories

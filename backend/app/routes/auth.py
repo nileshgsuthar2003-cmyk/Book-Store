@@ -16,10 +16,14 @@ def send_otp():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()
     name = (data.get("name") or "Book Lover").strip()
+    phone = (data.get("phone") or "").strip()
     purpose = (data.get("purpose") or "register").strip()
 
     if not email or "@" not in email:
         return jsonify({"error": "Please enter a valid email address."}), 400
+
+    if purpose == "register" and not phone:
+        return jsonify({"error": "Please provide your mobile number."}), 400
 
     conn = get_db_connection()
     try:
@@ -68,6 +72,7 @@ def register():
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip().lower()
+    phone = (data.get("phone") or "").strip()
     password = data.get("password") or ""
     otp = (data.get("otp") or "").strip()
     # Public registration always creates standard customer accounts
@@ -75,6 +80,9 @@ def register():
 
     if not name or not email or not password:
         return jsonify({"error": "Name, email, and password are required."}), 400
+
+    if not phone:
+        return jsonify({"error": "Mobile number is required."}), 400
 
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters long."}), 400
@@ -107,12 +115,12 @@ def register():
             # 3. Mark OTP as consumed
             cur.execute("UPDATE email_otps SET is_used = 1 WHERE id = %s;", (otp_record["id"],))
 
-            # 4. Insert new user into MySQL
+            # 4. Insert new user into MySQL with mobile number
             pwd_hash = hash_password(password)
             cur.execute("""
-                INSERT INTO users (name, email, password_hash, role)
-                VALUES (%s, %s, %s, %s);
-            """, (name, email, pwd_hash, role))
+                INSERT INTO users (name, email, password_hash, role, phone)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (name, email, pwd_hash, role, phone))
             user_id = cur.lastrowid
         conn.commit()
 
@@ -122,7 +130,7 @@ def register():
             "name": name,
             "email": email,
             "role": role,
-            "phone": "",
+            "phone": phone,
             "address": "",
             "city": "",
             "state": "",

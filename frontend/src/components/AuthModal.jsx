@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Sparkles,
   Eye,
-  EyeOff
+  EyeOff,
+  Phone
 } from "lucide-react";
 
 export const AuthModal = () => {
@@ -31,6 +32,7 @@ export const AuthModal = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -60,13 +62,35 @@ export const AuthModal = () => {
     };
   }, [resendTimer]);
 
-  // Reset internal step state when switching modes or closing
+  // Reset all fields when modal opens or closes
+  useEffect(() => {
+    if (authModalOpen) {
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        password: ""
+      });
+      setOtpCode("");
+      setDemoOtp("");
+      setError("");
+      setRegisterStep("form");
+    }
+  }, [authModalOpen]);
+
+  // Reset internal step state and input fields when switching modes or closing
   const handleTabSwitch = (mode) => {
     setAuthModalMode(mode);
     setRegisterStep("form");
     setOtpCode("");
     setDemoOtp("");
     setError("");
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      password: ""
+    });
   };
 
   const handleClose = () => {
@@ -75,6 +99,12 @@ export const AuthModal = () => {
     setOtpCode("");
     setDemoOtp("");
     setError("");
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      password: ""
+    });
   };
 
   if (!authModalOpen) return null;
@@ -90,8 +120,14 @@ export const AuthModal = () => {
     e.preventDefault();
     setError("");
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
-      setError("Please provide your name, email, and password.");
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.password) {
+      setError("Please provide your name, mobile number, email, and password.");
+      return;
+    }
+
+    const cleanPhone = formData.phone.replace(/[\s-]/g, "");
+    if (cleanPhone.length < 10) {
+      setError("Please enter a valid 10-digit mobile number.");
       return;
     }
 
@@ -105,6 +141,7 @@ export const AuthModal = () => {
       const res = await sendOtp({
         email: formData.email,
         name: formData.name,
+        phone: formData.phone.trim(),
         purpose: "register"
       });
 
@@ -138,7 +175,8 @@ export const AuthModal = () => {
         formData.name,
         formData.email,
         formData.password,
-        cleanOtp
+        cleanOtp,
+        formData.phone.trim()
       );
 
       showToast(`Email verified! Welcome to BookNest, ${res.user.name}.`, "success");
@@ -177,6 +215,7 @@ export const AuthModal = () => {
       const res = await sendOtp({
         email: formData.email,
         name: formData.name,
+        phone: formData.phone.trim(),
         purpose: "register"
       });
 
@@ -253,7 +292,7 @@ export const AuthModal = () => {
             VIEW 1: SIGN IN FORM
             ========================================================================= */}
         {isLogin && (
-          <form className="auth-form" onSubmit={handleLoginSubmit}>
+          <form className="auth-form" onSubmit={handleLoginSubmit} autoComplete="off">
             <div className="auth-field">
               <label htmlFor="authEmail">Email Address</label>
               <div className="input-with-icon">
@@ -266,6 +305,7 @@ export const AuthModal = () => {
                   placeholder="name@example.com"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -282,6 +322,7 @@ export const AuthModal = () => {
                   placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -305,7 +346,7 @@ export const AuthModal = () => {
             VIEW 2: CREATE ACCOUNT - STEP 1 (DETAILS)
             ========================================================================= */}
         {!isLogin && registerStep === "form" && (
-          <form className="auth-form" onSubmit={handleRequestOtp}>
+          <form className="auth-form" onSubmit={handleRequestOtp} autoComplete="off">
             <div className="auth-field">
               <label htmlFor="authName">Full Name</label>
               <div className="input-with-icon">
@@ -317,6 +358,24 @@ export const AuthModal = () => {
                   placeholder="e.g. Maya Sharma"
                   value={formData.name}
                   onChange={handleChange}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="authPhone">Mobile Number</label>
+              <div className="input-with-icon">
+                <Phone size={16} className="field-icon" />
+                <input
+                  id="authPhone"
+                  name="phone"
+                  type="tel"
+                  required
+                  placeholder="+91 98765 43210"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -333,6 +392,7 @@ export const AuthModal = () => {
                   placeholder="name@example.com"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="off"
                 />
               </div>
               <small className="field-sub-note">We'll send a 6-digit verification code to this address.</small>
@@ -350,6 +410,7 @@ export const AuthModal = () => {
                   placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
