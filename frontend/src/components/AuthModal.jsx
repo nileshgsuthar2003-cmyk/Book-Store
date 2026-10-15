@@ -40,7 +40,6 @@ export const AuthModal = () => {
   // 'form' = filling name, email, password; 'otp' = verifying 6-digit email code
   const [registerStep, setRegisterStep] = useState("form");
   const [otpCode, setOtpCode] = useState("");
-  const [demoOtp, setDemoOtp] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
 
@@ -72,7 +71,6 @@ export const AuthModal = () => {
         password: ""
       });
       setOtpCode("");
-      setDemoOtp("");
       setError("");
       setRegisterStep("form");
     }
@@ -83,7 +81,6 @@ export const AuthModal = () => {
     setAuthModalMode(mode);
     setRegisterStep("form");
     setOtpCode("");
-    setDemoOtp("");
     setError("");
     setFormData({
       name: "",
@@ -97,7 +94,6 @@ export const AuthModal = () => {
     closeAuthModal();
     setRegisterStep("form");
     setOtpCode("");
-    setDemoOtp("");
     setError("");
     setFormData({
       name: "",
@@ -147,9 +143,6 @@ export const AuthModal = () => {
 
       setRegisterStep("otp");
       setResendTimer(60);
-      if (res.demo_otp) {
-        setDemoOtp(res.demo_otp);
-      }
       showToast(`Verification code sent to ${formData.email}!`, "info");
     } catch (err) {
       setError(err.message || "Failed to send verification code. Please check your email.");
@@ -220,9 +213,6 @@ export const AuthModal = () => {
       });
 
       setResendTimer(60);
-      if (res.demo_otp) {
-        setDemoOtp(res.demo_otp);
-      }
       showToast(`New verification code sent to ${formData.email}!`, "success");
     } catch (err) {
       setError(err.message || "Failed to resend code.");
@@ -467,21 +457,6 @@ export const AuthModal = () => {
                 />
               </div>
             </div>
-
-            {/* Quick Demo Fill Helper (Seamless local testing) */}
-            {demoOtp && (
-              <div
-                className="otp-demo-card"
-                onClick={() => setOtpCode(demoOtp)}
-                title="Click to automatically fill code"
-              >
-                <div className="demo-chip-badge">
-                  <Sparkles size={13} /> Demo Code
-                </div>
-                <strong>{demoOtp}</strong>
-                <span className="click-fill-text">(Click to Auto-fill)</span>
-              </div>
-            )}
 
             <button
               type="submit"

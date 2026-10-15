@@ -58,8 +58,7 @@ def send_otp():
         return jsonify({
             "success": True,
             "message": f"Verification code sent to {email}.",
-            "email": email,
-            "demo_otp": otp_code
+            "email": email
         }), 200
     except Exception as e:
         conn.rollback()
