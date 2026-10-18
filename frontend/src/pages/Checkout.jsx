@@ -23,7 +23,7 @@ export const Checkout = () => {
     navigate,
     showToast
   } = useShop();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -56,6 +56,13 @@ export const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [stockError, setStockError] = useState("");
 
+  // Automatically prompt login if user visits checkout while not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && cartItemCount > 0) {
+      openAuthModal("login");
+    }
+  }, [isAuthenticated, cartItemCount, openAuthModal]);
+
   if (cartItemCount === 0 && !isProcessing) {
     return (
       <div className="checkout-page">
@@ -81,6 +88,49 @@ export const Checkout = () => {
     );
   }
 
+  if (!isAuthenticated && !isProcessing) {
+    return (
+      <div className="checkout-page">
+        <div className="container page-heading">
+          <nav className="breadcrumbs" aria-label="Breadcrumbs">
+            <a href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }}>Home</a>
+            <span className="breadcrumb-sep">/</span>
+            <a href="/cart" onClick={(e) => { e.preventDefault(); navigate("/cart"); }}>Book Bag</a>
+            <span className="breadcrumb-sep">/</span>
+            <span>Checkout</span>
+          </nav>
+          <h1>Sign in to complete your order</h1>
+          <p>Please log in or create an account to securely finalize your purchase and track deliveries.</p>
+        </div>
+        <div className="container">
+          <div className="empty-state auth-required-state" style={{ maxWidth: 540, margin: "40px auto", textAlign: "center" }}>
+            <div className="empty-icon">🔐</div>
+            <h3>Account Required for Checkout</h3>
+            <p>
+              Your book bag is saved! Sign in to auto-fill your delivery address and keep track of your order history.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => openAuthModal("login")}
+              >
+                Sign In to Account
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => openAuthModal("register")}
+              >
+                Create New Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -89,6 +139,12 @@ export const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStockError("");
+
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      showToast("Please sign in or create an account to place an order.", "warning");
+      return;
+    }
 
     // 1. Client-side quick stock check
     const itemsPayload = Object.entries(cart).map(([id, qty]) => ({

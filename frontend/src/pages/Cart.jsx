@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/useAuth";
 import { formatPrice } from "../data/booksData";
 import { Trash2, Plus, Minus, ArrowRight, Tag, Sparkles } from "lucide-react";
 
@@ -16,8 +17,10 @@ export const Cart = () => {
     couponCode,
     applyCoupon,
     removeCoupon,
-    navigate
+    navigate,
+    showToast
   } = useShop();
+  const { isAuthenticated, openAuthModal } = useAuth();
 
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
@@ -210,7 +213,14 @@ export const Cart = () => {
 
               <button
                 className="btn btn-primary full proceed-btn"
-                onClick={() => navigate("/checkout")}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal("login");
+                    showToast("Please sign in or create an account to proceed to checkout.", "info");
+                  } else {
+                    navigate("/checkout");
+                  }
+                }}
               >
                 Proceed to checkout <ArrowRight size={15} />
               </button>

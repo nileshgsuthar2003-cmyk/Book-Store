@@ -2,12 +2,12 @@ import random
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from database import get_db_connection
-from app.utils.auth import optional_token, admin_required
+from app.utils.auth import token_required, optional_token, admin_required
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/api/orders")
 
 @orders_bp.route("", methods=["POST"])
-@optional_token
+@token_required
 def create_order():
     data = request.get_json() or {}
     customer = data.get("customer") or {}
@@ -74,8 +74,10 @@ def create_order():
             total = max(0.0, subtotal + shipping_fee - discount)
             order_code = f"BN-{random.randint(100000, 999999)}"
 
-            # If logged in user, associate user_id
-            user_id = request.user["id"] if getattr(request, "user", None) else None
+            # Associate authenticated user
+            user = getattr(request, "user", {}) or {}
+            user_id = user.get("id")
+            customer_email = (customer.get("email") or user.get("email", "")).strip()
 
             # Insert order into MySQL
             cur.execute("""
@@ -85,7 +87,7 @@ def create_order():
                     subtotal, shipping_fee, discount, total, status
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Confirmed');
             """, (
-                order_code, user_id, customer["name"], customer["email"], customer["phone"],
+                order_code, user_id, customer["name"], customer_email, customer["phone"],
                 customer["address"], customer["city"], customer["state"], customer["pincode"],
                 customer.get("paymentMethod", "Cash on delivery (demo)"),
                 subtotal, shipping_fee, discount, total
